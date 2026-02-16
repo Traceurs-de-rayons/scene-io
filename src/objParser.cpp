@@ -1,6 +1,43 @@
 #include "objParser.hpp"
 #include <fstream>
 #include <iostream>
+#include <unordered_map>
+
+#include <functional>
+
+
+namespace sceneIO::parser
+{
+	struct VertexKey
+	{
+		uint32_t posIndex = 0;
+		uint32_t uvIndex = 0;
+		uint32_t normalIndex = 0;
+
+		bool operator==(const VertexKey& other) const noexcept
+		{
+			return (posIndex == other.posIndex &&
+					uvIndex == other.uvIndex &&
+					normalIndex == other.normalIndex);
+		}
+	};
+}
+
+namespace std
+{
+	template<>
+	struct hash<sceneIO::parser::VertexKey>
+	{
+		size_t operator()(const sceneIO::parser::VertexKey& k) const noexcept
+		{
+			size_t seed = 0;
+			seed ^= std::hash<uint32_t>{}(k.posIndex) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			seed ^= std::hash<uint32_t>{}(k.uvIndex) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			seed ^= std::hash<uint32_t>{}(k.normalIndex) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			return seed;
+		}
+	};
+}
 
 namespace sceneIO::parser
 {
@@ -18,16 +55,15 @@ namespace sceneIO::parser
 		vec3 v;
 
 		v.x = std::strtof(start, &newpos);
-		if (start == newpos)
-			throw ObjParseError(std::string(err));
+		if (start == newpos) throw ObjParseError(std::string(err));
 		start = newpos;
+
 		v.y = std::strtof(start, &newpos);
-		if (start == newpos)
-			throw ObjParseError(std::string(err));
+		if (start == newpos) throw ObjParseError(std::string(err));
 		start = newpos;
+
 		v.z = std::strtof(start, &newpos);
-		if (start == newpos)
-			throw ObjParseError(std::string(err));
+		if (start == newpos) throw ObjParseError(std::string(err));
 
 		return v;
 	}
@@ -38,26 +74,18 @@ namespace sceneIO::parser
 		vec2 v;
 
 		v.x = std::strtof(start, &newpos);
-		if (start == newpos)
-			throw ObjParseError(std::string(err));
+		if (start == newpos) throw ObjParseError(std::string(err));
 		start = newpos;
+
 		v.y = std::strtof(start, &newpos);
-		if (start == newpos)
-			throw ObjParseError(std::string(err));
+		if (start == newpos) throw ObjParseError(std::string(err));
 
 		return v;
 	}
 
-	struct VertexKey
+	static inline void micro_atoi(uint32_t &res, const char *&str, const char *type)
 	{
-		uint32_t posIndex;
-		uint32_t uvIndex;
-		uint32_t normalIndex;
-	};
-
-	static inline const char *micro_atoi(uint32_t &res, const char *str, const char *type)
-	{
-#if defined(__GNUC__) || defined(__clang__)
+	#if defined(__GNUC__) || defined(__clang__)
 		while (*str >= '0' && *str <= '9')
 		{
 			if (__builtin_mul_overflow(res, 10u, &res) ||
@@ -65,19 +93,17 @@ namespace sceneIO::parser
 				throw ObjParseError(std::string(type) + " index too large");
 			str++;
 		}
-#else
+	#else
 		uint32_t overflow_check = 0;
 
 		while (*str >= '0' && *str <= '9')
 		{
 			res = res * 10 + *str - '0';
 			str++;
-			if (overflow_check > res)
-				throw ObjParseError(std::string(type) + " index too large");
+			if (overflow_check > res) throw ObjParseError(std::string(type) + " index too large");
 			overflow_check = res;
 		}
-#endif
-		return str;
+	#endif
 	}
 
 	/**
@@ -85,35 +111,23 @@ namespace sceneIO::parser
 	 */
 	bool parseFaceVertex(VertexKey &v, const char *&str)
 	{
-		while (std::isspace(*str))
-			str++;
+		while (std::isspace(*str)) str++;
 
-		if (!isdigit(*str))
-			return false;
+		if (!isdigit(*str)) return false;
 
-		str = micro_atoi(v.posIndex, str, "vertex");
+		micro_atoi(v.posIndex, str, "vertex");
 
-		if (*str == '/')
-			str++;
-		else if (std::isspace(*str) || !*str)
-		{
-			return true;
-		}
-		else
-			throw ObjParseError("Maformated face");
+		if (*str == '/') str++;
+		else if (std::isspace(*str) || !*str) return true;
+		else throw ObjParseError("Maformated face");
 
-		str = micro_atoi(v.uvIndex, str, "uv");
+		micro_atoi(v.uvIndex, str, "uv");
 
-		if (*str == '/')
-			str++;
-		else if (std::isspace(*str) || !*str)
-		{
-			return true;
-		}
-		else
-			throw ObjParseError("Maformated face");
+		if (*str == '/') str++;
+		else if (std::isspace(*str) || !*str) return true;
+		else throw ObjParseError("Maformated face");
 
-		str = micro_atoi(v.normalIndex, str, "normal");
+		micro_atoi(v.normalIndex, str, "normal");
 
 		return true;
 	}
@@ -122,8 +136,7 @@ namespace sceneIO::parser
 	{
 		std::ifstream in(path, std::ios_base::in);
 
-		if (!in.is_open())
-			throw std::ios_base::failure("Cannot open file: " + path);
+		if (!in.is_open()) throw std::ios_base::failure("Cannot open file: " + path);
 
 		std::string line;
 		size_t line_count = 0;
@@ -135,6 +148,8 @@ namespace sceneIO::parser
 		uint32_t currentMeshID = -1;
 		uint32_t currentSubMeshID = -1;
 		std::string currentMaterial = "default";
+
+		std::unordered_map<VertexKey, uint32_t> vertexMap;
 
 		try
 		{
@@ -164,8 +179,7 @@ namespace sceneIO::parser
 				{
 					currentMaterial = line.substr(8);
 
-					if (currentMeshID < 0)
-						continue;
+					if (currentMeshID < 0) continue;
 
 					asset.meshes_[currentMeshID]->subMeshes_.push_back(std::make_unique<SubMesh>(currentMaterial));
 					currentSubMeshID++;
@@ -187,22 +201,53 @@ namespace sceneIO::parser
 					std::vector<VertexKey> faceVertex;
 					const char *str = line.c_str() + 2;
 
-					VertexKey tmp = {0, 0, 0};
+					VertexKey tmp;
 					while (parseFaceVertex(tmp, str))
 					{
 						faceVertex.push_back(tmp);
 						tmp = {0, 0, 0};
 					}
 
-					// for (size_t i = 0; i < faceVertex.size(); i++)
-					// {
-					// 	std::cout << faceVertex[i].posIndex << " " << faceVertex[i].uvIndex << " " << faceVertex[i].normalIndex << " | ";
-					// }
-					// std::cout << std::endl;
+					std::vector<uint32_t> faceVertexIndexes;
+					faceVertexIndexes.reserve(faceVertex.size());
+
+					for (auto vertexKeyIt = faceVertex.begin(); vertexKeyIt != faceVertex.end(); vertexKeyIt++)
+					{
+						auto vert = vertexMap.find(*vertexKeyIt);
+						uint32_t realIndex;
+
+						if (vert == vertexMap.end())
+						{
+							realIndex = asset.meshes_[currentMeshID]->vertices_.size();
+							Vertex finalVertex;
+							try
+							{
+								finalVertex.pos = pos[vertexKeyIt->posIndex - 1];
+
+								if (vertexKeyIt->uvIndex == 0) finalVertex.uv = vec2(0);
+								else finalVertex.uv = uv[vertexKeyIt->uvIndex - 1];
+
+								if (vertexKeyIt->normalIndex == 0) finalVertex.normal = vec3(0); // TODO: Calculer selon la face
+								else finalVertex.normal = normal[vertexKeyIt->normalIndex - 1];
+							}
+							catch(const std::exception& e)
+							{
+								throw ObjParseError("Invalid index it the face");
+							}
+							
+							asset.meshes_[currentMeshID]->vertices_.push_back(finalVertex);
+							vertexMap[*vertexKeyIt] = realIndex;
+						}
+						else realIndex = vert->second;
+						
+						faceVertexIndexes.push_back(realIndex);
+					}
 				}
 			}
 
-		} catch (const std::exception& err) {
+		}
+		catch (const std::exception& err)
+		{
 			throw ObjParseError(path + ":" + std::to_string(line_count) + ": " + err.what());
 		}
 	}
