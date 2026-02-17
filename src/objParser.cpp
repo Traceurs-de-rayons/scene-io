@@ -2,9 +2,8 @@
 #include <fstream>
 #include <iostream>
 #include <unordered_map>
-
+#include <list>
 #include <functional>
-
 
 namespace sceneIO::parser
 {
@@ -132,6 +131,95 @@ namespace sceneIO::parser
 		return true;
 	}
 
+	vec2 project(const vec3& v, const vec3& faceNormal)
+	{
+		float ax = std::abs(faceNormal.x);
+		float ay = std::abs(faceNormal.y);
+		float az = std::abs(faceNormal.z);
+
+		if (az >= ax && az >= ay)
+			return { v.x, v.y };
+		if (ay >= ax && ay >= az)
+			return { v.x, v.z };
+		return { v.y, v.z };
+	}
+
+	float cross2D(vec2 a, vec2 b, vec2 c)
+	{
+		return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+	}
+
+	bool pointInTriangle2D(vec2 p, vec2 a, vec2 b, vec2 c)
+	{
+		float areaABC = std::abs(cross2D(a, b, c));
+		
+		float areaPBC = std::abs(cross2D(p, b, c));
+		float areaPCA = std::abs(cross2D(p, c, a));
+		float areaPAB = std::abs(cross2D(p, a, b));
+		
+		float epsilon = 1e-6f;
+		return std::abs(areaABC - (areaPBC + areaPCA + areaPAB)) < epsilon
+			   && areaPBC > epsilon && areaPCA > epsilon && areaPAB > epsilon;
+	}
+
+	bool isEar(const std::vector<Vertex>& meshVertices, uint32_t iPrev, uint32_t iCurr, uint32_t iNext, const vec3& faceNormal, const std::list<uint32_t>& polygon)
+	{
+		vec2 prev = project(meshVertices[iPrev].pos, faceNormal);
+		vec2 curr = project(meshVertices[iCurr].pos, faceNormal);
+		vec2 next = project(meshVertices[iNext].pos, faceNormal);
+
+		float area = cross2D(prev, curr, next);
+		if (std::abs(area) < 1e-6f)
+			return false;
+
+		for (uint32_t vertex : polygon)
+		{
+			if (vertex == iPrev || vertex == iCurr || vertex == iNext)
+				continue;
+
+			vec2 p = project(meshVertices[vertex].pos, faceNormal);
+			if (pointInTriangle2D(p, prev, curr, next))
+				return false;
+		}
+
+		return true;
+	}
+
+	void earClipping(const std::vector<Vertex>& meshVertices, const std::vector<uint32_t>& faceIndices, std::vector<uint32_t>& result, vec3& faceNormal)
+	{		
+		std::list<uint32_t> polygon(faceIndices.begin(), faceIndices.end());
+		
+		while (polygon.size() > 3)
+		{
+			bool earFound = false;
+			
+			for (auto it = polygon.begin(); it != polygon.end(); ++it)
+			{
+				auto prev = (it == polygon.begin()) ? std::prev(polygon.end()) : std::prev(it);
+				auto next = std::next(it);
+				if (next == polygon.end()) next = polygon.begin();
+				
+				if (isEar(meshVertices, *prev, *it, *next, faceNormal, polygon))
+				{
+					result.push_back(*prev);
+					result.push_back(*it);
+					result.push_back(*next);
+					
+					polygon.erase(it);
+					earFound = true;
+					break;
+				}
+			}
+			
+			if (!earFound) throw ObjParseError("The face is a degenerated polygon. Is this face counter clock wise ?");
+		}
+		
+		auto it = polygon.begin();
+		result.push_back(*it++);
+		result.push_back(*it++);
+		result.push_back(*it);
+	}
+
 	void parseObj(Asset &asset, const std::string &path)
 	{
 		std::ifstream in(path, std::ios_base::in);
@@ -140,6 +228,7 @@ namespace sceneIO::parser
 
 		std::string line;
 		size_t line_count = 0;
+		asset.type_ = AssetObject;
 
 		std::vector<vec3> pos;
 		std::vector<vec3> normal;
@@ -174,10 +263,11 @@ namespace sceneIO::parser
 					asset.meshes_.push_back(std::make_unique<Mesh>(line.substr(2)));
 					currentMeshID++;
 					currentSubMeshID = -1;
+					vertexMap.clear();
 				}
 				else if (line.starts_with("usemtl "))
 				{
-					currentMaterial = line.substr(8);
+					currentMaterial = line.substr(7);
 
 					if (currentMeshID < 0) continue;
 
@@ -208,8 +298,12 @@ namespace sceneIO::parser
 						tmp = {0, 0, 0};
 					}
 
+					if (faceVertex.size() < 3) throw ObjParseError("Invalid vertex count on the face");
+
 					std::vector<uint32_t> faceVertexIndexes;
 					faceVertexIndexes.reserve(faceVertex.size());
+
+					bool faceMissingNormal = false;
 
 					for (auto vertexKeyIt = faceVertex.begin(); vertexKeyIt != faceVertex.end(); vertexKeyIt++)
 					{
@@ -227,7 +321,11 @@ namespace sceneIO::parser
 								if (vertexKeyIt->uvIndex == 0) finalVertex.uv = vec2(0);
 								else finalVertex.uv = uv[vertexKeyIt->uvIndex - 1];
 
-								if (vertexKeyIt->normalIndex == 0) finalVertex.normal = vec3(0); // TODO: Calculer selon la face
+								if (vertexKeyIt->normalIndex == 0)
+								{
+									faceMissingNormal = true;
+									finalVertex.normal = vec3(0);
+								}
 								else finalVertex.normal = normal[vertexKeyIt->normalIndex - 1];
 							}
 							catch(const std::exception& e)
@@ -242,6 +340,23 @@ namespace sceneIO::parser
 						
 						faceVertexIndexes.push_back(realIndex);
 					}
+
+					vec3 faceNormal = vec3::cross(asset.meshes_[currentMeshID]->vertices_[faceVertexIndexes[1]].pos - asset.meshes_[currentMeshID]->vertices_[faceVertexIndexes[0]].pos,
+												  asset.meshes_[currentMeshID]->vertices_[faceVertexIndexes[2]].pos - asset.meshes_[currentMeshID]->vertices_[faceVertexIndexes[0]].pos).normalized();
+
+					if (faceMissingNormal)
+					{
+						for (auto vertexIt = faceVertexIndexes.begin(); vertexIt != faceVertexIndexes.end(); vertexIt++)
+						{
+							if (asset.meshes_[currentMeshID]->vertices_[*vertexIt].normal == vec3(0))
+								asset.meshes_[currentMeshID]->vertices_[*vertexIt].normal = faceNormal;
+						}
+					}
+
+					if (vec3::dot(asset.meshes_[currentMeshID]->vertices_[faceVertexIndexes[0]].normal, faceNormal) < 0)
+						faceNormal = -faceNormal;
+
+					earClipping(asset.meshes_[currentMeshID]->vertices_, faceVertexIndexes, asset.meshes_[currentMeshID]->subMeshes_[currentSubMeshID]->indices_, faceNormal);
 				}
 			}
 
