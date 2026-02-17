@@ -2,8 +2,9 @@
 #include <fstream>
 #include <iostream>
 #include <unordered_map>
-#include <list>
 #include <functional>
+#include <cstring>
+#include <charconv>
 
 namespace sceneIO::parser
 {
@@ -29,10 +30,9 @@ namespace std
 	{
 		size_t operator()(const sceneIO::parser::VertexKey& k) const noexcept
 		{
-			size_t seed = 0;
-			seed ^= std::hash<uint32_t>{}(k.posIndex) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-			seed ^= std::hash<uint32_t>{}(k.uvIndex) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
-			seed ^= std::hash<uint32_t>{}(k.normalIndex) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			size_t seed = k.posIndex + 0x9e3779b9;
+			seed ^= k.uvIndex + 0x9e3779b9 + (seed << 6) + (seed >> 2);
+			seed ^= k.normalIndex + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 			return seed;
 		}
 	};
@@ -48,37 +48,47 @@ namespace sceneIO::parser
 		return res;
 	}
 
-	vec3 parseVec3(const char *start, const char *err = "Invalid value")
+	static inline vec3 parseVec3(const char *ptr, const char *err = "Invalid value")
 	{
-		char *newpos = NULL;
 		vec3 v;
+		const char* end = ptr + std::strlen(ptr);
 
-		v.x = std::strtof(start, &newpos);
-		if (start == newpos) throw ObjParseError(std::string(err));
-		start = newpos;
+		while (ptr < end && std::isspace(*ptr)) ptr++;
 
-		v.y = std::strtof(start, &newpos);
-		if (start == newpos) throw ObjParseError(std::string(err));
-		start = newpos;
+		auto r1 = std::from_chars(ptr, end, v.x);
+		if (r1.ec != std::errc()) throw ObjParseError(std::string(err));
+		ptr = r1.ptr;
 
-		v.z = std::strtof(start, &newpos);
-		if (start == newpos) throw ObjParseError(std::string(err));
+		while (ptr < end && std::isspace(*ptr)) ptr++;
+
+		auto r2 = std::from_chars(ptr, end, v.y);
+		if (r2.ec != std::errc()) throw ObjParseError(std::string(err));
+		ptr = r2.ptr;
+
+		while (ptr < end && std::isspace(*ptr)) ptr++;
+
+		auto r3 = std::from_chars(ptr, end, v.z);
+		if (r3.ec != std::errc()) throw ObjParseError(std::string(err));
 
 		return v;
 	}
 
-	vec2 parseVec2(const char *start, const char *err = "Invalid value")
+	static inline vec2 parseVec2(const char *ptr, const char *err = "Invalid value")
 	{
-		char *newpos = NULL;
 		vec2 v;
+		const char* end = ptr + std::strlen(ptr);
 
-		v.x = std::strtof(start, &newpos);
-		if (start == newpos) throw ObjParseError(std::string(err));
-		start = newpos;
+		while (ptr < end && std::isspace(*ptr)) ptr++;
 
-		v.y = std::strtof(start, &newpos);
-		if (start == newpos) throw ObjParseError(std::string(err));
+		auto r1 = std::from_chars(ptr, end, v.x);
+		if (r1.ec != std::errc()) throw ObjParseError(std::string(err));
+		ptr = r1.ptr;
 
+		while (ptr < end && std::isspace(*ptr)) ptr++;
+
+		auto r2 = std::from_chars(ptr, end, v.y);
+		if (r2.ec != std::errc()) throw ObjParseError(std::string(err));
+		
 		return v;
 	}
 
@@ -108,7 +118,7 @@ namespace sceneIO::parser
 	/**
 	 * @return true if valid, false if end of the line
 	 */
-	bool parseFaceVertex(VertexKey &v, const char *&str)
+	static inline bool parseFaceVertex(VertexKey &v, const char *&str)
 	{
 		while (std::isspace(*str)) str++;
 
@@ -131,7 +141,7 @@ namespace sceneIO::parser
 		return true;
 	}
 
-	vec2 project(const vec3& v, const vec3& faceNormal)
+	static inline vec2 project(const vec3& v, const vec3& faceNormal)
 	{
 		float ax = std::abs(faceNormal.x);
 		float ay = std::abs(faceNormal.y);
@@ -144,12 +154,12 @@ namespace sceneIO::parser
 		return { v.y, v.z };
 	}
 
-	float cross2D(vec2 a, vec2 b, vec2 c)
+	static inline float cross2D(vec2 a, vec2 b, vec2 c)
 	{
 		return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 	}
 
-	bool pointInTriangle2D(vec2 p, vec2 a, vec2 b, vec2 c)
+	static inline bool pointInTriangle2D(vec2 p, vec2 a, vec2 b, vec2 c)
 	{
 		float areaABC = std::abs(cross2D(a, b, c));
 		
@@ -162,7 +172,7 @@ namespace sceneIO::parser
 			   && areaPBC > epsilon && areaPCA > epsilon && areaPAB > epsilon;
 	}
 
-	bool isEar(const std::vector<Vertex>& meshVertices, uint32_t iPrev, uint32_t iCurr, uint32_t iNext, const vec3& faceNormal, const std::list<uint32_t>& polygon)
+	static inline bool isEar(const std::vector<Vertex>& meshVertices, uint32_t iPrev, uint32_t iCurr, uint32_t iNext, const vec3& faceNormal, std::vector<uint32_t>& polygon)
 	{
 		vec2 prev = project(meshVertices[iPrev].pos, faceNormal);
 		vec2 curr = project(meshVertices[iCurr].pos, faceNormal);
@@ -185,10 +195,8 @@ namespace sceneIO::parser
 		return true;
 	}
 
-	void earClipping(const std::vector<Vertex>& meshVertices, const std::vector<uint32_t>& faceIndices, std::vector<uint32_t>& result, vec3& faceNormal)
+	static inline void earClipping(const std::vector<Vertex>& meshVertices, std::vector<uint32_t>& polygon, std::vector<uint32_t>& result, vec3& faceNormal)
 	{		
-		std::list<uint32_t> polygon(faceIndices.begin(), faceIndices.end());
-		
 		while (polygon.size() > 3)
 		{
 			bool earFound = false;
@@ -226,13 +234,13 @@ namespace sceneIO::parser
 
 		if (!in.is_open()) throw std::ios_base::failure("Cannot open file: " + path);
 
-		std::string line;
+		char line[512];
 		size_t line_count = 0;
 		asset.type_ = AssetObject;
 
-		std::vector<vec3> pos;
-		std::vector<vec3> normal;
-		std::vector<vec2> uv;
+		std::vector<vec3> pos;    pos.reserve(1024);
+		std::vector<vec3> normal; normal.reserve(1024);
+		std::vector<vec2> uv;     uv.reserve(1024);
 
 		uint32_t currentMeshID = -1;
 		uint32_t currentSubMeshID = -1;
@@ -242,39 +250,39 @@ namespace sceneIO::parser
 
 		try
 		{
-			while (getline(in, line))
+			while (in.getline(line, sizeof(line)))
 			{
 				line_count++;
 
-				if (line.starts_with("v "))
+				if (std::strncmp(line, "v ", 2) == 0)
 				{
-					pos.push_back(parseVec3(line.c_str() + 2, "Malformated vertex"));
+					pos.push_back(parseVec3(line + 2, "Malformated vertex"));
 				}
-				else if (line.starts_with("vn "))
+				else if (std::strncmp(line, "vn ", 3) == 0)
 				{
-					normal.push_back(parseVec3(line.c_str() + 3, "Malformated normal direction"));
+					normal.push_back(parseVec3(line + 3, "Malformated normal direction"));
 				}
-				else if (line.starts_with("vt "))
+				else if (std::strncmp(line, "vt ", 3) == 0)
 				{
-					uv.push_back(parseVec2(line.c_str() + 3, "Malformated uv"));
+					uv.push_back(parseVec2(line + 3, "Malformated uv"));
 				}
-				else if (line.starts_with("o "))
+				else if (std::strncmp(line, "o ", 2) == 0)
 				{
-					asset.meshes_.push_back(std::make_unique<Mesh>(line.substr(2)));
+					asset.meshes_.push_back(std::make_unique<Mesh>(std::string(line + 2)));
 					currentMeshID++;
 					currentSubMeshID = -1;
 					vertexMap.clear();
 				}
-				else if (line.starts_with("usemtl "))
+				else if (std::strncmp(line, "usemtl ", 7) == 0)
 				{
-					currentMaterial = line.substr(7);
+					currentMaterial = std::string(line + 7);
 
 					if (currentMeshID < 0) continue;
 
 					asset.meshes_[currentMeshID]->subMeshes_.push_back(std::make_unique<SubMesh>(currentMaterial));
 					currentSubMeshID++;
 				}
-				else if (line.starts_with("f "))
+				else if (std::strncmp(line, "f ", 2) == 0)
 				{
 					if (currentMeshID < 0)
 					{
@@ -289,7 +297,7 @@ namespace sceneIO::parser
 					}
 
 					std::vector<VertexKey> faceVertex;
-					const char *str = line.c_str() + 2;
+					const char *str = line + 2;
 
 					VertexKey tmp;
 					while (parseFaceVertex(tmp, str))
