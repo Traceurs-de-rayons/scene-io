@@ -1,70 +1,239 @@
 #include "tdr/lexer.hpp"
 #include "tdr/error.hpp"
+#include "colors.hpp"
 
 #include <algorithm> 
 #include <cctype>
 #include <locale>
+#include <iomanip>
 
 namespace sceneIO::tdr {
-
-void ltrim(std::string &s)
-{
-	s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-		return !std::isspace(ch);
-	}));
-}
-
-void rtrim(std::string &s)
-{
-	s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
-		return !std::isspace(ch);
-	}).base(), s.end());
-}
-
-void trim(std::string &s)
-{
-	rtrim(s);
-	ltrim(s);
-}
 
 std::vector<Token> lexer(std::ifstream& in)
 {
 	std::vector<Token> tokens;
 
-	std::string line;
-	uint64_t line_count = 0;
-
-	Token currentToken;
-
-	while (getline(in, line))
+	uint64_t line = 1;
+	uint64_t column = 1;
+	char c;
+	
+	auto peek = [&]() -> char
 	{
-		uint64_t col = 0;
-		line_count++;
-
-		for (char c : line)
+		int next = in.peek();
+		return (next == EOF) ? '\0' : static_cast<char>(next);
+	};
+	
+	auto advance = [&]() -> char
+	{
+		if (!in.get(c)) return '\0';
+		if (c == '\n')
 		{
-			col++;
+			line++;
+			column = 1;
+		}
+		else column++;
+		return c;
+	};
+	
+	auto skip_whitespace_in_tag = [&]()
+	{
+		while (std::isspace(peek()) && peek() != '\0') advance();
+	};
+	
+	auto skip_comment = [&]()
+	{
+		if (peek() == '#')
+			while (peek() != '\n' && peek() != '\0')
+				advance();
+	};
+	
+	auto read_identifier = [&](int start_line, int start_col) -> Token
+	{
+		std::string value;
 
-			// if (std::isspace(c) && (currentToken.type == TokenOpen || currentToken.type == TokenClose))
-			// {
-			// 	throw TdrError({.line = line_count, .column = col}, "Unexpected 'char');
-			// }
-			if (c == '<')
+		while (std::isalnum(peek()) || peek() == '_' || peek() == '-')
+			value += advance();
+
+		return {TokenType::IDENTIFIER, value, start_line, start_col};
+	};
+	
+	auto read_string = [&](int start_line, int start_col) -> Token
+	{
+		std::string value;
+		char quote = c;
+		
+		while (true)
+		{
+			if (peek() == quote)
 			{
-				if (currentToken.type == TokenOpen) throw TdrError({.line = line_count, .column = col}, "Expected '>' after '<" + currentToken.value + "'");
-				else if (currentToken.type == TokenClose) throw TdrError({.line = line_count, .column = col}, "Expected '>' after '</" + currentToken.value + "'");
-				else
-				{
-					trim(currentToken.value);
-					if (!currentToken.value.empty()) tokens.push_back(currentToken);
+				advance();
+				break;
+			}
+			else if (peek() == '\0') throw TdrError(line, column, "Unterminated string literal");
+			else if (peek() == '\n') throw TdrError(line, column, "Newline in string literal");
 
-					// changer le state du token
+			advance();
+			if (c == '\\')
+			{
+				if (peek() == '\0') throw TdrError(line, column, "Unterminated escape sequence");
+
+				advance();
+				switch (c)
+				{
+					case 'n':	value += '\n';	break;
+					case 't':	value += '\t';	break;
+					case '\\':	value += '\\';	break;
+					case '"':	value += '"';	break;
+					case '\'':	value += '\'';	break;
+					default:	value += c;		break;
 				}
 			}
+			else value += c;
 		}
-	}
+		
+		return {TokenType::STRING, value, start_line, start_col};
+	};
+	
+	auto read_text = [&](int start_line, int start_col) -> Token
+	{
+		std::string value;
+		
+		while (peek() != '<' && peek() != '\0')
+		{
+			if (peek() == '#')
+			{
+				skip_comment();
+				continue;
+			}
+			advance();
+			value += c;
+		}
+		
+		size_t start = value.find_first_not_of(" \t\n\r");
+		size_t end = value.find_last_not_of(" \t\n\r");
+		
+		if (start == std::string::npos) value = "";
+		else value = value.substr(start, end - start + 1);
+		
+		return {TokenType::TEXT, value, start_line, start_col};
+	};
+	
+	bool inside_tag = false;
+	
+	while (peek() != '\0')
+	{
+		skip_comment();
+		
+		if (!inside_tag && std::isspace(peek()))
+		{
+			advance();
+			continue;
+		}
+		
+		int start_line = line;
+		int start_col = column;
+		
+		if (peek() == '<')
+		{
+			advance();
+			
+			if (peek() == '/')
+			{
+				advance();
+				skip_whitespace_in_tag();
+				
+				if (!std::isalpha(peek())) throw TdrError(line, column, "Expected valid tag name after '</'");
+				
+				tokens.push_back({TokenType::TAG_END_OPEN, "", start_line, start_col});
+				tokens.push_back(read_identifier(line, column));
+				inside_tag = true;
+				
+			}
+			else
+			{
+				skip_whitespace_in_tag();
 
+				if (!std::isalpha(peek())) throw TdrError(line, column, "Expected valid tag name after '<'");
+	
+				tokens.push_back({TokenType::TAG_OPEN, "", start_line, start_col});
+				tokens.push_back(read_identifier(line, column));
+				inside_tag = true;
+			}
+		}
+		else if (inside_tag && peek() == '>')
+		{
+			advance();
+			tokens.push_back({TokenType::TAG_CLOSE, "", start_line, start_col});
+			inside_tag = false;
+		}
+		else if (inside_tag && peek() == '/')
+		{
+			advance();
+			if (peek() == '>')
+			{
+				advance();
+				tokens.push_back({TokenType::TAG_SELF_CLOSE, "", start_line, start_col});
+				inside_tag = false;
+			}
+			else throw TdrError(line, column, "Expected '>' after '/'");
+		}
+		else if (inside_tag && peek() == '=')
+		{
+			advance();
+			tokens.push_back({TokenType::EQUALS, "", start_line, start_col});
+		}
+		else if (inside_tag && (peek() == '"' || peek() == '\''))
+		{
+			advance();
+			tokens.push_back(read_string(start_line, start_col));
+		}
+		else if (inside_tag && std::isalpha(peek()))
+		{
+			tokens.push_back(read_identifier(line, column));
+		}
+		else if (inside_tag && std::isspace(peek()))
+		{
+			skip_whitespace_in_tag();
+		}
+		else if (!inside_tag && peek() != '\0')
+		{
+			Token text = read_text(start_line, start_col);
+
+			if (!text.value.empty()) tokens.push_back(text);
+		}
+		else throw TdrError(line, column, std::string("Unexpected character '") + peek() + "'");
+	}
 	return tokens;
 }
+
+
+void print_tokens(const std::vector<Token>& tokens)
+{
+	std::cout << STYLE_BOLD << COLOR_BRIGHT_CYAN << "=== TOKENS ===" << COLOR_RESET << std::endl;
+	
+	for (const Token& token : tokens)
+	{
+		std::cout << COLOR_BRIGHT_BLACK 
+				<< std::setw(4) << std::right << token.line 
+				<< ":" 
+				<< std::setw(3) << std::left << token.column 
+				<< COLOR_RESET;
+		
+		std::cout << " " << COLOR_YELLOW 
+				<< std::setw(16) << std::left << token.type 
+				<< COLOR_RESET;
+		
+		if (!token.value.empty()) {
+			std::cout << " " << COLOR_GREEN 
+					<< "\"" << token.value << "\"" 
+					<< COLOR_RESET;
+		}
+		
+		std::cout << std::endl;
+	}
+	
+	std::cout << STYLE_BOLD << COLOR_BRIGHT_CYAN  << "=== " << tokens.size() << " tokens ===" << COLOR_RESET << std::endl;
+}
+
 
 }

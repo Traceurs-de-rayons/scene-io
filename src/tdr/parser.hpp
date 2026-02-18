@@ -1,23 +1,47 @@
 #pragma once
 
-#include "scene-core.hpp"
-#include <exception>
+#include "tdr/lexer.hpp"
+#include "tdr/error.hpp"
+
+#include <map>
 
 namespace sceneIO::tdr {
 
-	class TdrParseError : public std::runtime_error {
-	public:
-		using std::runtime_error::runtime_error;
-	};
 
-	void parseTdr(Asset& asset, const std::string& path);
-	Asset parseTdr(const std::string& path);
+Node parser(std::vector<Token>& list, ErrorCollector& errors);
+
+class ErrorCollector
+{
+
+private:
+	std::vector<TdrError> errors_;
+	
+public:
+	ErrorCollector() = default;
+	~ErrorCollector() = default;
+
+	void report(TdrError error) { errors_.push_back(std::move(error)); }
+	
+	bool has_errors() const { return !errors_.empty(); }
+	const std::vector<TdrError>& get_errors() const { return errors_; }
+};
+
+class Node
+{
+private:
+	std::string identifier_;
+	std::vector<Node> children_;
+	std::map<std::string, std::string> attributes_;
+	std::string text_; 
+
+	friend Node parser(std::vector<Token>& list, ErrorCollector& errors);
+
+public:
+	Node(const std::string& identifier = "root") : identifier_(identifier) {}
+	~Node() {}
+
+};
 
 
-	namespace tdr {
-
-		
-
-	}
 
 }

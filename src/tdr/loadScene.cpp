@@ -5,6 +5,8 @@
 
 namespace sceneIO::tdr {
 
+
+
 void loadSceneFromFile(Scene& scene, const std::string& path)
 {
 	std::ifstream in(path, std::ios_base::in);
@@ -14,6 +16,8 @@ void loadSceneFromFile(Scene& scene, const std::string& path)
 		if (!in.is_open()) throw TdrError("Cannot open file");
 	
 		auto tokens = lexer(in);
+
+		print_tokens(tokens);
 	}
 	catch (TdrError& e)
 	{

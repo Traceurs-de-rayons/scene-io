@@ -28,6 +28,8 @@ private:
 public:
 	TdrError(SourceLocation loc, const std::string& msg)
 		: std::runtime_error(loc.format() + " " + msg), location(loc), msg_(msg) {}
+	TdrError(uint64_t line, uint64_t column, const std::string& msg)
+		: std::runtime_error(msg), location({.line = line, .column = column}), msg_(msg) {}
 	TdrError(const std::string& msg)
 		: std::runtime_error(msg), location({}), msg_(msg) {}
 
