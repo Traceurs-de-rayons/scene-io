@@ -16,8 +16,19 @@ void loadSceneFromFile(Scene& scene, const std::string& path)
 		if (!in.is_open()) throw TdrError("Cannot open file");
 	
 		auto tokens = lexer(in);
-
 		print_tokens(tokens);
+
+		ErrorCollector errors;
+
+		Node root = parser(tokens, errors);
+
+		
+
+		for (TdrError e : errors.get_errors())
+		{
+			e.location.filepath = path;
+			cu::logger::error(TdrError(e.location, e.getMessage()).what());
+		}
 	}
 	catch (TdrError& e)
 	{

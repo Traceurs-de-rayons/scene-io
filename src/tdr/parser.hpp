@@ -7,9 +7,6 @@
 
 namespace sceneIO::tdr {
 
-
-Node parser(std::vector<Token>& list, ErrorCollector& errors);
-
 class ErrorCollector
 {
 
@@ -44,6 +41,6 @@ public:
 
 };
 
-
+Node parser(std::vector<Token>& list, ErrorCollector& errors);
 
 }

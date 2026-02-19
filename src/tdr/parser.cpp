@@ -1,5 +1,6 @@
 #include "tdr/parser.hpp"
 #include <memory>
+#include <functional>
 
 namespace sceneIO::tdr {
 
@@ -22,7 +23,7 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 		return list[cursor];
 	};
 
-	auto parseNode = [&]() -> std::unique_ptr<Node>
+	std::function<std::unique_ptr<Node>()> parseNode = [&]() -> std::unique_ptr<Node>
 	{
 		auto eofError = [&]() -> std::unique_ptr<Node>
 		{
@@ -43,6 +44,11 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 		while (peek().type == TokenType::IDENTIFIER)
 		{
 			std::string& propertyName = peek().value;
+			
+			if (res->attributes_.find(propertyName) != res->attributes_.end())
+				errors.report(TdrError(peek().line, peek().column, "Duplicated attribute '" + propertyName + "'"));
+			
+			res->attributes_[propertyName];
 
 			advance(res);
 
@@ -58,7 +64,7 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 					advance(res);
 				}
 				else errors.report(TdrError(peek().line, peek().column, "Expected string value after '=' (did you forget quotes?)"));
-			}
+			}			
 		}
 
 		if (peek().type == TokenType::END_OF_FILE) return eofError();
@@ -77,45 +83,91 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 				{
 					if (res->text_.empty()) res->text_ = peek().value;
 					else errors.report(TdrError(peek().line, peek().column, "Unexpected text. (splitted content not allowed)"));
+					advance(res);
 				}
-				else if (peek().type == TokenType::TAG_CLOSE) // END TAG
+				else if (peek().type == TokenType::TAG_END_OPEN) // END TAG
 				{
 					advance(res);
-					if (peek().type == TokenType::IDENTIFIER)
+
+					if (peek().type != TokenType::IDENTIFIER) errors.report(TdrError(peek().line, peek().column, "Invalid end of tag. Expected '</" + res->identifier_ + ">'"));
+					while (peek().type != TokenType::IDENTIFIER
+						&& peek().type != TokenType::TAG_CLOSE
+						&& peek().type != TokenType::TAG_SELF_CLOSE
+						&& peek().type != TokenType::END_OF_FILE)
+						advance(nullptr);
+
+					if (peek().type == TokenType::END_OF_FILE) return eofError();
+					else if (peek().type == TokenType::TAG_CLOSE || peek().type == TokenType::TAG_SELF_CLOSE)
 					{
-						if (peek().value == res->identifier_)
+						errors.report(TdrError(peek().line, peek().column, "Invalid close tag. Expected '</" + res->identifier_ + ">'"));
+						advance(res);
+						return res;
+					}
+
+					if (peek().value == res->identifier_)
+					{
+						advance(res);
+						if (peek().type == TokenType::TAG_CLOSE)
 						{
 							advance(res);
-							if (peek().type == TokenType::TAG_CLOSE)
-							{
-								advance(res);
-								return res;
-							}
-							else errors.report(TdrError(peek().line, peek().column, "Invalid end of tag. Expected '</" + res->identifier_ + ">'"));
+							return res;
 						}
-						else
-						{
-							errors.report(TdrError(peek().line, peek().column, "Unexpected identifier '"+ peek().value +"'. Expected '" + res->identifier_ + "'"));
-						}
+						errors.report(TdrError(peek().line, peek().column, "Invalid end of tag. Expected '</" + res->identifier_ + ">'"));
 						
+						while (peek().type != TokenType::TAG_CLOSE && peek().type != TokenType::END_OF_FILE)
+							advance(nullptr);
+						
+						if (peek().type == TokenType::TAG_CLOSE)
+						{
+							advance(res);
+							return res;
+						}
+						else return eofError();
+					}
+					else
+					{
+						cursor--;
+						errors.report(TdrError(peek().line, peek().column, "Unclosed tag '<" + res->identifier_ + ">'"));
+						cursor--;
+						return res;
 					}
 				}
-			}
+				else if (peek().type == TokenType::TAG_OPEN)
+				{
+					std::unique_ptr<Node> child = parseNode();
 
-			// recup text + recursivité
+					if (child == nullptr) return nullptr;
+
+					res->children_.push_back(*child);
+				}
+				else
+				{
+					errors.report(TdrError(peek().line, peek().column, "Unexpected token '" + getTokenContent(peek()) + "'."));
+					advance(nullptr);
+				}
+			}
 		}
 		else errors.report(TdrError(peek().line, peek().column, "Unexpected token '" + getTokenContent(peek()) + "' inside a tag. Close it with '>' or '/>'"));
-
-
+		
+		return nullptr;
 	};
 
 	while (peek().type != TokenType::END_OF_FILE)
 	{
 		if (peek().type == TokenType::TAG_OPEN)
 		{
+			std::unique_ptr<Node> child = parseNode();
 
+			if (child) root.children_.push_back(*child);
+		}
+		else
+		{
+			errors.report(TdrError(peek().line, peek().column, "Unexpected token '" + getTokenContent(peek()) + "'."));
+			advance(nullptr);
 		}
 	}
+
+	return root;
 
 }
 

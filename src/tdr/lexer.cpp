@@ -47,7 +47,7 @@ std::vector<Token> lexer(std::ifstream& in)
 				advance();
 	};
 	
-	auto read_identifier = [&](int start_line, int start_col) -> Token
+	auto read_identifier = [&](uint64_t start_line, uint64_t start_col) -> Token
 	{
 		std::string value;
 
@@ -57,7 +57,7 @@ std::vector<Token> lexer(std::ifstream& in)
 		return {TokenType::IDENTIFIER, value, start_line, start_col};
 	};
 	
-	auto read_string = [&](int start_line, int start_col) -> Token
+	auto read_string = [&](uint64_t start_line, uint64_t start_col) -> Token
 	{
 		std::string value;
 		char quote = c;
@@ -94,7 +94,7 @@ std::vector<Token> lexer(std::ifstream& in)
 		return {TokenType::STRING, value, start_line, start_col};
 	};
 	
-	auto read_text = [&](int start_line, int start_col) -> Token
+	auto read_text = [&](uint64_t start_line, uint64_t start_col) -> Token
 	{
 		std::string value;
 		
@@ -130,8 +130,8 @@ std::vector<Token> lexer(std::ifstream& in)
 			continue;
 		}
 		
-		int start_line = line;
-		int start_col = column;
+		uint64_t start_line = line;
+		uint64_t start_col = column;
 		
 		if (peek() == '<')
 		{

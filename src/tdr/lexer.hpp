@@ -23,8 +23,8 @@ struct Token
 {
 	TokenType type = TokenType::TEXT;
 	std::string value;
-	int line;
-	int column;
+	uint64_t line;
+	uint64_t column;
 };
 
 std::vector<Token> lexer(std::ifstream& in);
