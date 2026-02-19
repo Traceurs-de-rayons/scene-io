@@ -18,13 +18,13 @@ void loadSceneFromFile(Scene& scene, const std::string& path)
 		auto tokens = lexer(in);
 		print_tokens(tokens);
 
-		ErrorCollector errors;
+		ErrorCollector parsingErrors;
 
-		Node root = parser(tokens, errors);
+		Node root = parser(tokens, parsingErrors);
 
-		
+		root.print();
 
-		for (TdrError e : errors.get_errors())
+		for (TdrError e : parsingErrors.get_errors())
 		{
 			e.location.filepath = path;
 			cu::logger::error(TdrError(e.location, e.getMessage()).what());

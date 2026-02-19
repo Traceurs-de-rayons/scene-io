@@ -1,4 +1,6 @@
 #include "tdr/parser.hpp"
+#include <iostream>
+#include "colors.hpp"
 #include <memory>
 #include <functional>
 
@@ -17,10 +19,25 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 
 	auto advance = [&](const std::unique_ptr<Node>& node) -> Token&
 	{
-		if (node) node->tokens_.push_back(list[cursor]);
-		if (list.size() < cursor) throw TdrError("Internal TDR parser error");
+		if (cursor >= list.size()) throw TdrError("Internal TDR parser error: cursor overflow");
+		
+		Token& current = list[cursor];
+		
+		if (node) node->tokens_.push_back(current);
+		
 		cursor++;
-		return list[cursor];
+		return current;
+	};
+
+	auto skip_close_tag_unwanted_token = [&]()
+	{
+		while (peek().type != TokenType::IDENTIFIER
+			&& peek().type != TokenType::TAG_CLOSE
+			&& peek().type != TokenType::TAG_SELF_CLOSE
+			&& peek().type != TokenType::END_OF_FILE)
+		{
+			advance(nullptr);
+		}
 	};
 
 	std::function<std::unique_ptr<Node>()> parseNode = [&]() -> std::unique_ptr<Node>
@@ -82,19 +99,15 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 				if (peek().type == TokenType::TEXT)
 				{
 					if (res->text_.empty()) res->text_ = peek().value;
-					else errors.report(TdrError(peek().line, peek().column, "Unexpected text. (splitted content not allowed)"));
+					else errors.report(TdrError(peek().line, peek().column, "Multiple text blocks not allowed (text content must be in a single block)"));
 					advance(res);
 				}
-				else if (peek().type == TokenType::TAG_END_OPEN) // END TAG
+				else if (peek().type == TokenType::TAG_END_OPEN)
 				{
 					advance(res);
 
 					if (peek().type != TokenType::IDENTIFIER) errors.report(TdrError(peek().line, peek().column, "Invalid end of tag. Expected '</" + res->identifier_ + ">'"));
-					while (peek().type != TokenType::IDENTIFIER
-						&& peek().type != TokenType::TAG_CLOSE
-						&& peek().type != TokenType::TAG_SELF_CLOSE
-						&& peek().type != TokenType::END_OF_FILE)
-						advance(nullptr);
+					skip_close_tag_unwanted_token();
 
 					if (peek().type == TokenType::END_OF_FILE) return eofError();
 					else if (peek().type == TokenType::TAG_CLOSE || peek().type == TokenType::TAG_SELF_CLOSE)
@@ -126,9 +139,9 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 					}
 					else
 					{
+						if (cursor < 2) throw TdrError("Internal TDR parser error: cursor underflow protection");
 						cursor--;
 						errors.report(TdrError(peek().line, peek().column, "Unclosed tag '<" + res->identifier_ + ">'"));
-						cursor--;
 						return res;
 					}
 				}
@@ -138,7 +151,7 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 
 					if (child == nullptr) return nullptr;
 
-					res->children_.push_back(*child);
+					res->children_.push_back(std::move(*child));
 				}
 				else
 				{
@@ -149,7 +162,7 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 		}
 		else errors.report(TdrError(peek().line, peek().column, "Unexpected token '" + getTokenContent(peek()) + "' inside a tag. Close it with '>' or '/>'"));
 		
-		return nullptr;
+		return res;
 	};
 
 	while (peek().type != TokenType::END_OF_FILE)
@@ -158,7 +171,7 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 		{
 			std::unique_ptr<Node> child = parseNode();
 
-			if (child) root.children_.push_back(*child);
+			if (child) root.children_.push_back(std::move(*child));
 		}
 		else
 		{
@@ -169,6 +182,51 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 
 	return root;
 
+}
+
+void Node::print(int nest) const
+{
+	COLORS_INIT();
+	std::string indent(nest * 2, ' ');
+	
+	std::cout << indent << COLOR_CYAN << "<" << identifier_ << COLOR_RESET;
+	
+	for (const auto& [key, value] : attributes_)
+	{
+		std::cout << " " << COLOR_YELLOW << key << COLOR_RESET << "=" << COLOR_GREEN << "\"" << value << "\"" << COLOR_RESET;
+	}
+
+	if (children_.empty() && text_.empty())
+	{
+		std::cout << COLOR_CYAN << " />" << COLOR_RESET << std::endl;
+	}
+	else
+	{
+		std::cout << COLOR_CYAN << ">" << COLOR_RESET;
+
+		bool hasContent = !text_.empty();
+		if (hasContent)
+		{
+			std::cout << COLOR_WHITE << text_ << COLOR_RESET;
+		}
+		
+		if (!children_.empty())
+		{
+			if (hasContent) std::cout << std::endl;
+			else std::cout << std::endl;
+			
+			for (const Node& child : children_)
+			{
+				child.print(nest + 1);
+			}
+			std::cout << indent;
+		}
+		
+		if (!children_.empty())
+			std::cout << COLOR_CYAN << "</" << identifier_ << ">" << COLOR_RESET << std::endl;
+		else
+			std::cout << COLOR_CYAN << "</" << identifier_ << ">" << COLOR_RESET << std::endl;
+	}
 }
 
 }
