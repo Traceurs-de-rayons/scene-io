@@ -15,7 +15,8 @@ enum class TokenType {
 	IDENTIFIER,		// key
 	EQUALS,			// =
 	STRING,			// "value"
-	TEXT			// balise content
+	TEXT,			// balise content
+	END_OF_FILE
 };
 
 struct Token
@@ -29,6 +30,7 @@ struct Token
 std::vector<Token> lexer(std::ifstream& in);
 void print_tokens(const std::vector<Token>& tokens);
 
+const std::string getTokenContent(Token& tok);
 
 inline std::ostream& operator<<(std::ostream& io, TokenType token)
 {

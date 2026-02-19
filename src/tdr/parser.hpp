@@ -32,7 +32,9 @@ private:
 	std::string identifier_;
 	std::vector<Node> children_;
 	std::map<std::string, std::string> attributes_;
-	std::string text_; 
+	std::string text_;
+
+	std::vector<Token> tokens_;
 
 	friend Node parser(std::vector<Token>& list, ErrorCollector& errors);
 

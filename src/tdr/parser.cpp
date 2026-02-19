@@ -1,5 +1,5 @@
-
 #include "tdr/parser.hpp"
+#include <memory>
 
 namespace sceneIO::tdr {
 
@@ -9,76 +9,109 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 
 	size_t cursor = 0;
 
-	auto peek = [&]() -> Token*
+	auto peek = [&]() -> Token&
 	{
-		if (list.size() >= cursor) return &list[cursor];
-		return nullptr;
+		return list[cursor];
 	};
 
-	auto advance = [&]() -> Token&
+	auto advance = [&](const std::unique_ptr<Node>& node) -> Token&
 	{
+		if (node) node->tokens_.push_back(list[cursor]);
 		if (list.size() < cursor) throw TdrError("Internal TDR parser error");
 		cursor++;
 		return list[cursor];
 	};
 
-	auto current = [&]() -> Token&
+	auto parseNode = [&]() -> std::unique_ptr<Node>
 	{
-		return list[cursor];
-	};
-
-	auto parseNode = [&]() -> Node*
-	{
-		auto eofError = [&]() -> Node*
+		auto eofError = [&]() -> std::unique_ptr<Node>
 		{
-			errors.report(TdrError(current().line, current().column, "Invalid tag at the end of the file"));
+			errors.report(TdrError(peek().line, peek().column, "Unexpected end of file"));
 			return nullptr;
 		};
 
-		Node res;
+		auto res = std::make_unique<Node>();
 
-		advance();
+		advance(res);
 
-		if (!peek()) return eofError();
-		advance();
+		if (peek().type == TokenType::END_OF_FILE) return eofError();
+		else if (peek().type != TokenType::IDENTIFIER) errors.report(TdrError(peek().line, peek().column, "Tag identifier expected"));
+		else res->identifier_ = peek().value;
 
-		if (current().type != TokenType::IDENTIFIER) errors.report(TdrError(current().line, current().column, "Tag identifier expected"));
-		else res.identifier_ = current().value;
+		advance(res);
 
-		if (!peek()) return eofError();
-		advance();
-
-		while (current().type == TokenType::IDENTIFIER)
+		while (peek().type == TokenType::IDENTIFIER)
 		{
-			std::string& propertyName = current().value;
+			std::string& propertyName = peek().value;
 
-			if (!peek()) return eofError();
-			advance();
+			advance(res);
 
-			if (current().type == TokenType::EQUALS)
+			if (peek().type == TokenType::END_OF_FILE) return eofError();
+			else if (peek().type == TokenType::EQUALS)
 			{
-				if (!peek()) return eofError();
-				advance();
+				advance(res);
 
-				if (current().type == TokenType::STRING)
+				if (peek().type == TokenType::END_OF_FILE) return eofError();
+				else if (peek().type == TokenType::STRING)
 				{
-					res.attributes_[propertyName] = current().value;
-					if (!peek()) return eofError(); // Au moi de demain matin, remet le node EOF en fait, ca permet d'eviter tous les !peek (je pense)
-					advance();
+					res->attributes_[propertyName] = peek().value;
+					advance(res);
 				}
-				else
-				{
-
-				}
+				else errors.report(TdrError(peek().line, peek().column, "Expected string value after '=' (did you forget quotes?)"));
 			}
 		}
+
+		if (peek().type == TokenType::END_OF_FILE) return eofError();
+		else if (peek().type == TokenType::TAG_SELF_CLOSE)
+		{
+			advance(res);
+			return res;
+		}
+		else if (peek().type == TokenType::TAG_CLOSE)
+		{
+			advance(res);
+
+			while (peek().type != TokenType::END_OF_FILE)
+			{
+				if (peek().type == TokenType::TEXT)
+				{
+					if (res->text_.empty()) res->text_ = peek().value;
+					else errors.report(TdrError(peek().line, peek().column, "Unexpected text. (splitted content not allowed)"));
+				}
+				else if (peek().type == TokenType::TAG_CLOSE) // END TAG
+				{
+					advance(res);
+					if (peek().type == TokenType::IDENTIFIER)
+					{
+						if (peek().value == res->identifier_)
+						{
+							advance(res);
+							if (peek().type == TokenType::TAG_CLOSE)
+							{
+								advance(res);
+								return res;
+							}
+							else errors.report(TdrError(peek().line, peek().column, "Invalid end of tag. Expected '</" + res->identifier_ + ">'"));
+						}
+						else
+						{
+							errors.report(TdrError(peek().line, peek().column, "Unexpected identifier '"+ peek().value +"'. Expected '" + res->identifier_ + "'"));
+						}
+						
+					}
+				}
+			}
+
+			// recup text + recursivité
+		}
+		else errors.report(TdrError(peek().line, peek().column, "Unexpected token '" + getTokenContent(peek()) + "' inside a tag. Close it with '>' or '/>'"));
 
 
 	};
 
-	while (peek())
+	while (peek().type != TokenType::END_OF_FILE)
 	{
-		if (current().type == TokenType::TAG_OPEN)
+		if (peek().type == TokenType::TAG_OPEN)
 		{
 
 		}

@@ -203,6 +203,7 @@ std::vector<Token> lexer(std::ifstream& in)
 		}
 		else throw TdrError(line, column, std::string("Unexpected character '") + peek() + "'");
 	}
+	tokens.push_back((Token){TokenType::END_OF_FILE, "", line, column});
 	return tokens;
 }
 
@@ -235,5 +236,20 @@ void print_tokens(const std::vector<Token>& tokens)
 	std::cout << STYLE_BOLD << COLOR_BRIGHT_CYAN  << "=== " << tokens.size() << " tokens ===" << COLOR_RESET << std::endl;
 }
 
+const std::string getTokenContent(Token& tok)
+{
+	switch (tok.type)
+	{
+		case TokenType::TAG_OPEN: return "<";
+		case TokenType::TAG_END_OPEN: return "</";
+		case TokenType::TAG_CLOSE: return ">";
+		case TokenType::TAG_SELF_CLOSE: return "/>";
+		case TokenType::EQUALS: return "=";
+		case TokenType::END_OF_FILE: return "End Of File";
+		case TokenType::IDENTIFIER: return "identifier: " + std::string("\"") + tok.value + std::string("\"");
+		case TokenType::STRING: return "string: " + std::string("\"") + tok.value + std::string("\"");
+		case TokenType::TEXT: return "text: " + std::string("\"") + tok.value + std::string("\"");
+	}
+}
 
 }
