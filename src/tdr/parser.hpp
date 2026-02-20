@@ -7,22 +7,6 @@
 
 namespace sceneIO::tdr {
 
-class ErrorCollector
-{
-
-private:
-	std::vector<TdrError> errors_;
-	
-public:
-	ErrorCollector() = default;
-	~ErrorCollector() = default;
-
-	void report(TdrError error) { errors_.push_back(std::move(error)); }
-	
-	bool has_errors() const { return !errors_.empty(); }
-	const std::vector<TdrError>& get_errors() const { return errors_; }
-};
-
 class Node
 {
 private:

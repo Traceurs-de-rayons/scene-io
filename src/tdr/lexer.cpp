@@ -9,7 +9,7 @@
 
 namespace sceneIO::tdr {
 
-std::vector<Token> lexer(std::ifstream& in)
+std::vector<Token> lexer(std::istream& in, ErrorCollector& errors)
 {
 	std::vector<Token> tokens;
 
@@ -69,13 +69,25 @@ std::vector<Token> lexer(std::ifstream& in)
 				advance();
 				break;
 			}
-			else if (peek() == '\0') throw TdrError(line, column, "Unterminated string literal");
-			else if (peek() == '\n') throw TdrError(line, column, "Newline in string literal");
+			else if (peek() == '\0')
+			{
+				errors.report(TdrError(line, column, "Unterminated string literal"));
+				break;
+			}
+			else if (peek() == '\n')
+			{
+				errors.report(TdrError(line, column, "Newline in string literal"));
+				break;
+			}
 
 			advance();
 			if (c == '\\')
 			{
-				if (peek() == '\0') throw TdrError(line, column, "Unterminated escape sequence");
+				if (peek() == '\0')
+				{
+					errors.report(TdrError(line, column, "Unterminated escape sequence"));
+					break;
+				}
 
 				advance();
 				switch (c)
@@ -142,7 +154,7 @@ std::vector<Token> lexer(std::ifstream& in)
 				advance();
 				skip_whitespace_in_tag();
 				
-				if (!std::isalpha(peek())) throw TdrError(line, column, "Expected valid tag name after '</'");
+				if (!std::isalpha(peek())) errors.report(TdrError(line, column, "Expected valid tag name after '</'"));
 				
 				tokens.push_back({TokenType::TAG_END_OPEN, "", start_line, start_col});
 				tokens.push_back(read_identifier(line, column));
@@ -153,7 +165,7 @@ std::vector<Token> lexer(std::ifstream& in)
 			{
 				skip_whitespace_in_tag();
 
-				if (!std::isalpha(peek())) throw TdrError(line, column, "Expected valid tag name after '<'");
+				if (!std::isalpha(peek())) errors.report(TdrError(line, column, "Expected valid tag name after '<'"));
 	
 				tokens.push_back({TokenType::TAG_OPEN, "", start_line, start_col});
 				tokens.push_back(read_identifier(line, column));
@@ -175,7 +187,12 @@ std::vector<Token> lexer(std::ifstream& in)
 				tokens.push_back({TokenType::TAG_SELF_CLOSE, "", start_line, start_col});
 				inside_tag = false;
 			}
-			else throw TdrError(line, column, "Expected '>' after '/'");
+			else
+			{
+				tokens.push_back({TokenType::TAG_SELF_CLOSE, "", start_line, start_col});
+				inside_tag = false;
+				errors.report(TdrError(line, column, "Expected '>' after '/'"));
+			}
 		}
 		else if (inside_tag && peek() == '=')
 		{
@@ -201,7 +218,11 @@ std::vector<Token> lexer(std::ifstream& in)
 
 			if (!text.value.empty()) tokens.push_back(text);
 		}
-		else throw TdrError(line, column, std::string("Unexpected character '") + peek() + "'");
+		else
+		{
+			errors.report(TdrError(line, column, std::string("Unexpected character '") + peek() + "'"));
+			advance();
+		}
 	}
 	tokens.push_back((Token){TokenType::END_OF_FILE, "", line, column});
 	return tokens;

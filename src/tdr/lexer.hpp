@@ -5,6 +5,8 @@
 #include <fstream>
 #include <iostream>
 
+#include "tdr/error.hpp"
+
 namespace sceneIO::tdr {
 
 enum class TokenType {
@@ -27,7 +29,7 @@ struct Token
 	uint64_t column;
 };
 
-std::vector<Token> lexer(std::ifstream& in);
+std::vector<Token> lexer(std::istream& in, ErrorCollector& errors);
 void print_tokens(const std::vector<Token>& tokens);
 
 const std::string getTokenContent(Token& tok);

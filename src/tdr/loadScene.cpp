@@ -1,7 +1,5 @@
+#include "tdr/LanguageService.hpp"
 #include "tdr/loadScene.hpp"
-#include "tdr/parser.hpp"
-#include "tdr/lexer.hpp"
-#include "tdr/error.hpp"
 
 namespace sceneIO::tdr {
 
@@ -9,36 +7,15 @@ namespace sceneIO::tdr {
 
 void loadSceneFromFile(Scene& scene, const std::string& path)
 {
-	std::ifstream in(path, std::ios_base::in);
-
-	try
+	ParseResult res = SceneLanguageService::parse_file(path);
+	
+	for (TdrError e : res.errors)
 	{
-		if (!in.is_open()) throw TdrError("Cannot open file");
-	
-		auto tokens = lexer(in);
-		print_tokens(tokens);
-
-		ErrorCollector parsingErrors;
-
-		Node root = parser(tokens, parsingErrors);
-
-		root.print();
-
-		for (TdrError e : parsingErrors.get_errors())
-		{
-			e.location.filepath = path;
-			cu::logger::error(TdrError(e.location, e.getMessage()).what());
-		}
+		cu::logger::error(e.getError());
 	}
-	catch (TdrError& e)
-	{
-		e.location.filepath = path;
-		throw TdrError(e.location, e.getMessage());
-	}
-	
-	
-	
-		
+
+	res.ast.print();
+
 }
 
 Scene loadSceneFromFile(const std::string& path)

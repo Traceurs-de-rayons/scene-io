@@ -27,16 +27,42 @@ private:
 
 public:
 	TdrError(SourceLocation loc, const std::string& msg)
-		: std::runtime_error(loc.format() + " " + msg), location(loc), msg_(msg) {}
+		: std::runtime_error(loc.format() + " " + msg), msg_(msg), location(loc) {}
 	TdrError(uint64_t line, uint64_t column, const std::string& msg)
-		: std::runtime_error(msg), location({.line = line, .column = column}), msg_(msg) {}
+		: std::runtime_error(msg), msg_(msg), location({.line = line, .column = column}) {}
 	TdrError(const std::string& msg)
-		: std::runtime_error(msg), location({}), msg_(msg) {}
+		: std::runtime_error(msg), msg_(msg), location({}) {}
 
 	SourceLocation location;
 
-	const std::string getMessage() { return msg_; }
+	const std::string& getMessage() const { return msg_; }
+	const std::string getError() const { return location.format() + " " + msg_; }
 
 };
+
+class ErrorCollector
+{
+
+private:
+	std::vector<TdrError> errors_;
+	
+public:
+	ErrorCollector() = default;
+	~ErrorCollector() = default;
+
+	void report(TdrError error) { errors_.push_back(std::move(error)); }
+
+	void setFilePath(const std::string& path)
+	{
+		for (TdrError& e : errors_)
+		{
+			e.location.filepath = path;
+		}
+	}
+	
+	bool has_errors() const { return !errors_.empty(); }
+	const std::vector<TdrError>& get_errors() const { return errors_; }
+};
+
 
 }

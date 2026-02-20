@@ -128,7 +128,21 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 						errors.report(TdrError(peek().line, peek().column, "Invalid end of tag. Expected '</" + res->identifier_ + ">'"));
 						
 						while (peek().type != TokenType::TAG_CLOSE && peek().type != TokenType::END_OF_FILE)
-							advance(nullptr);
+						{
+							if (peek().type == TokenType::TAG_SELF_CLOSE)
+							{
+								errors.report(TdrError(peek().line, peek().column, "Found '/>' instead of '>'"));
+								advance(res);
+								return res;
+							}
+							else if (peek().type == TokenType::TAG_OPEN || peek().type == TokenType::TAG_END_OPEN)
+							{
+								errors.report(TdrError(peek().line, peek().column, "Unclosed tag '</" + res->identifier_ + "'"));
+								return res;
+							}
+							else
+								advance(nullptr);
+						}
 						
 						if (peek().type == TokenType::TAG_CLOSE)
 						{
