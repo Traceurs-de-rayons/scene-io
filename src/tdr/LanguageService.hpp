@@ -15,6 +15,7 @@ class SceneLanguageService
 public:
 	static ParseResult parse_file(const std::string& filepath);
 	static ParseResult parse_content(const std::string& content);
+	static const std::string get_hover(Node& ast);
 	
 	// std::vector<CompletionItem> get_completions(const std::string& content, int line, int col); // my dream
 	// std::optional<HoverInfo> get_hover(const std::string& content, int line, int col); // my dream v2

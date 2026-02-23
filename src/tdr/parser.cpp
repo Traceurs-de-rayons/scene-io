@@ -17,6 +17,12 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 		return list[cursor];
 	};
 
+	auto last = [&]() -> Token&
+	{
+		if (cursor > 0) return list[cursor - 1];
+		return list[cursor];
+	};
+
 	auto advance = [&](const std::unique_ptr<Node>& node) -> Token&
 	{
 		if (cursor >= list.size()) throw TdrError("Internal TDR parser error: cursor overflow");
@@ -61,11 +67,14 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 		while (peek().type == TokenType::IDENTIFIER)
 		{
 			std::string& propertyName = peek().value;
+			AttributeInfos attr;
+			attr.attr_line = peek().line;
+			attr.attr_column = peek().column;
 			
 			if (res->attributes_.find(propertyName) != res->attributes_.end())
 				errors.report(TdrError(peek().line, peek().column, "Duplicated attribute '" + propertyName + "'"));
 			
-			res->attributes_[propertyName];
+			res->attributes_[propertyName] = attr;
 
 			advance(res);
 
@@ -77,11 +86,14 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 				if (peek().type == TokenType::END_OF_FILE) return eofError();
 				else if (peek().type == TokenType::STRING)
 				{
-					res->attributes_[propertyName] = peek().value;
+					attr.content_line = peek().line;
+					attr.content_column = peek().column;
+					attr.content = peek().value;
+					res->attributes_[propertyName] = attr;
 					advance(res);
 				}
 				else errors.report(TdrError(peek().line, peek().column, "Expected string value after '=' (did you forget quotes?)"));
-			}			
+			}
 		}
 
 		if (peek().type == TokenType::END_OF_FILE) return eofError();
@@ -90,9 +102,12 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 			advance(res);
 			return res;
 		}
-		else if (peek().type == TokenType::TAG_CLOSE)
+		else
 		{
-			advance(res);
+			if (peek().type == TokenType::TAG_CLOSE)
+				advance(res);
+			else
+				errors.report(TdrError(last().line, last().column, "Unclosed tag '" + res->identifier_ + "' inside a tag. Close it with '>' or '/>'"));;
 
 			while (peek().type != TokenType::END_OF_FILE)
 			{
@@ -174,7 +189,6 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 				}
 			}
 		}
-		else errors.report(TdrError(peek().line, peek().column, "Unexpected token '" + getTokenContent(peek()) + "' inside a tag. Close it with '>' or '/>'"));
 		
 		return res;
 	};
@@ -207,7 +221,7 @@ void Node::print(int nest) const
 	
 	for (const auto& [key, value] : attributes_)
 	{
-		std::cout << " " << COLOR_YELLOW << key << COLOR_RESET << "=" << COLOR_GREEN << "\"" << value << "\"" << COLOR_RESET;
+		std::cout << " " << COLOR_YELLOW << key << COLOR_RESET << "=" << COLOR_GREEN << "\"" << value.content << "\"" << COLOR_RESET;
 	}
 
 	if (children_.empty() && text_.empty())
@@ -241,6 +255,19 @@ void Node::print(int nest) const
 		else
 			std::cout << COLOR_CYAN << "</" << identifier_ << ">" << COLOR_RESET << std::endl;
 	}
+}
+
+
+const std::pair<uint64_t, uint64_t> Node::getNodeBeginPos() const
+{
+	size_t i = 0;
+
+	while (i < tokens_.size())
+	{
+		if (tokens_[i].type == TokenType::IDENTIFIER)
+			return { tokens_[i].line, tokens_[i].column };
+	}
+	return { UINT64_MAX, UINT64_MAX };
 }
 
 }

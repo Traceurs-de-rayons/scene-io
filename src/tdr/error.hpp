@@ -24,19 +24,23 @@ class TdrError : public std::runtime_error
 
 private:
 	const std::string msg_;
+	int errorLevel_;
 
 public:
 	TdrError(SourceLocation loc, const std::string& msg)
-		: std::runtime_error(loc.format() + " " + msg), msg_(msg), location(loc) {}
+		: std::runtime_error(loc.format() + " " + msg), msg_(msg), errorLevel_(1), location(loc) {}
 	TdrError(uint64_t line, uint64_t column, const std::string& msg)
-		: std::runtime_error(msg), msg_(msg), location({.line = line, .column = column}) {}
+		: std::runtime_error(msg), msg_(msg), errorLevel_(1), location({.line = line, .column = column}) {}
+	TdrError(uint64_t line, uint64_t column, int errorLevel, const std::string& msg)
+		: std::runtime_error(msg), msg_(msg), errorLevel_(errorLevel), location({.line = line, .column = column}) {}
 	TdrError(const std::string& msg)
-		: std::runtime_error(msg), msg_(msg), location({}) {}
+		: std::runtime_error(msg), msg_(msg), errorLevel_(1), location({}) {}
 
 	SourceLocation location;
 
 	const std::string& getMessage() const { return msg_; }
 	const std::string getError() const { return location.format() + " " + msg_; }
+	int getErrorLevel() const { return errorLevel_; }
 
 };
 

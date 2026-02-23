@@ -57,4 +57,9 @@ ParseResult SceneLanguageService::parse_file(const std::string& path)
 	return {std::move(empty), errors.get_errors()};
 }
 
+const std::string get_hover(Node& ast)
+{
+	
+}
+
 }
