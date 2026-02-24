@@ -19,22 +19,7 @@ enum class ValueType
 	ENUM
 };
 
-const std::string printValueType(ValueType type)
-{
-	switch (type)
-	{
-		case ValueType::STRING:		return "string";
-		case ValueType::FLOAT:		return "float";
-		case ValueType::INT:		return "integer";
-		case ValueType::BOOL:		return "boolean";
-		case ValueType::VEC3:		return "vec3";
-		case ValueType::COLOR:		return "color";
-		case ValueType::FILEPATH:	return "filepath";
-		case ValueType::ENUM:		return "enum";
-		default: break;
-	}
-	return "";
-}
+const std::string printValueType(ValueType type);
 
 struct AttributeSchema
 {
@@ -59,14 +44,17 @@ struct TagSchema
 	bool allow_text;
 	std::optional<ValueType> text_type;
 
+	std::optional<std::pair<float, float>> range;	// INT/FLOAT/VEC
+	std::vector<std::string> enum_values;			// ENUM
+
 	std::map<std::string, AttributeSchema> attributes;
 	std::map<std::string, TagSchema> children;
 	
-	bool allow_multiple;
-
 	std::string hover_info;
 	std::string completion_detail;
 	std::vector<std::string> examples;
+
+	bool allow_multiple;
 };
 
 class SceneSchema

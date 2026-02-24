@@ -22,6 +22,17 @@ std::vector<Token> lexer(std::istream& in, ErrorCollector& errors)
 		int next = in.peek();
 		return (next == EOF) ? '\0' : static_cast<char>(next);
 	};
+
+	auto peek_next = [&]() -> char
+	{
+		char current = in.get();
+		if (current == EOF) return '\0';
+
+		int next = in.peek();
+		in.unget();
+		
+		return (next == EOF) ? '\0' : static_cast<char>(next);
+	};
 	
 	auto advance = [&]() -> char
 	{
@@ -42,7 +53,7 @@ std::vector<Token> lexer(std::istream& in, ErrorCollector& errors)
 	
 	auto skip_comment = [&]()
 	{
-		if (peek() == '#')
+		if (peek() == '/' && peek_next() == '/')
 			while (peek() != '\n' && peek() != '\0')
 				advance();
 	};
@@ -112,7 +123,7 @@ std::vector<Token> lexer(std::istream& in, ErrorCollector& errors)
 		
 		while (peek() != '<' && peek() != '\0')
 		{
-			if (peek() == '#')
+			if (peek() == '/')
 			{
 				skip_comment();
 				continue;

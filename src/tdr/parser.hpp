@@ -7,6 +7,8 @@
 
 namespace sceneIO::tdr {
 
+class SceneSchema;
+
 struct AttributeInfos
 {
 	std::string content;
@@ -27,7 +29,7 @@ private:
 	std::vector<Token> tokens_;
 
 	friend Node parser(std::vector<Token>& list, ErrorCollector& errors);
-	friend void semanticAnalyzer(Node& ast, ErrorCollector& errors);
+	friend void semanticAnalyzer(Node& ast, SceneSchema& sceneSchema, ErrorCollector& errors);
 
 public:
 	Node(const std::string& identifier = "root") : identifier_(identifier) {}

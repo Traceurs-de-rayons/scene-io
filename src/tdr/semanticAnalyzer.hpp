@@ -3,6 +3,8 @@
 #include "tdr/parser.hpp"
 #include "tdr/error.hpp"
 
+#include <charconv>
+
 namespace sceneIO::tdr {
 
 template <typename T>
@@ -22,6 +24,6 @@ bool isValidValue(const std::string& s)
 	return ec == std::errc() && ptr == s.data() + s.size();
 }
 
-void semanticAnalyzer(Node& ast, ErrorCollector& errors);
+void semanticAnalyzer(Node& ast, SceneSchema& sceneSchema, ErrorCollector& errors);
 
 }

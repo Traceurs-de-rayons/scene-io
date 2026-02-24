@@ -1,4 +1,5 @@
 #include "tdr/LanguageService.hpp"
+#include "tdr/SceneSchema.hpp"
 #include "logger.hpp"
 
 namespace sceneIO::tdr {
@@ -13,6 +14,9 @@ ParseResult SceneLanguageService::parse_content(const std::string& content)
 
 		auto tokens = lexer(stream, errors);
 		Node ast = parser(tokens, errors);
+
+		SceneSchema sch;
+		semanticAnalyzer(ast, sch, errors);
 
 		return {std::move(ast), errors.get_errors()};
 	}
@@ -40,6 +44,9 @@ ParseResult SceneLanguageService::parse_file(const std::string& path)
 		auto tokens = lexer(in, errors);
 		Node ast = parser(tokens, errors);
 
+		SceneSchema sch;
+		semanticAnalyzer(ast, sch, errors);
+
 		errors.setFilePath(path);
 		return {std::move(ast), errors.get_errors()};
 	}
@@ -59,7 +66,7 @@ ParseResult SceneLanguageService::parse_file(const std::string& path)
 
 const std::string get_hover(Node& ast)
 {
-	
+	return "test";
 }
 
 }

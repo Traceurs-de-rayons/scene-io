@@ -1,5 +1,3 @@
-#pragma once
-
 #include "tdr/semanticAnalyzer.hpp"
 #include "tdr/SceneSchema.hpp"
 
@@ -84,34 +82,32 @@ std::string isValidFilePath(const std::string& pathStr)
 	return "";
 }
 
-const std::string validType(const AttributeSchema& attr, const std::string& param, ErrorCollector& errors)
+const std::string validType(ValueType type, const std::optional<std::pair<float, float>>& attrRange, const std::vector<std::string>& attrEnum, const std::string& param, ErrorCollector& errors)
 {
-	ValueType type = attr.type;
-
 	switch (type)
 	{
 		case ValueType::STRING: return "";
 		case ValueType::FLOAT:
 		{
 			if (!isValidValue<float>(param)) break;
-			if (attr.range.has_value())
+			if (attrRange.has_value())
 			{
 				float val = std::stof(param);
 				
-				if (val > attr.range.value().second || val < attr.range.value().first)
-					return "Invalid parameter '" + param + "'. Value must be between " + std::to_string(attr.range.value().first) + " and " + std::to_string(attr.range.value().second);
+				if (val > attrRange.value().second || val < attrRange.value().first)
+					return "Invalid parameter '" + param + "'. Value must be between " + std::to_string(attrRange.value().first) + " and " + std::to_string(attrRange.value().second);
 			}
 			return "";
 		}
 		case ValueType::INT:
 		{
 			if (!isValidValue<int>(param)) break;
-			if (attr.range.has_value())
+			if (attrRange.has_value())
 			{
 				int val = std::stoi(param);
 				
-				if (val > attr.range.value().second || val < attr.range.value().first)
-					return "Invalid parameter '" + param + "'. Value must be between " + std::to_string(attr.range.value().first) + " and " + std::to_string(attr.range.value().second);
+				if (val > attrRange.value().second || val < attrRange.value().first)
+					return "Invalid parameter '" + param + "'. Value must be between " + std::to_string(attrRange.value().first) + " and " + std::to_string(attrRange.value().second);
 			}
 			return "";
 		}
@@ -123,11 +119,25 @@ const std::string validType(const AttributeSchema& attr, const std::string& para
 		case ValueType::VEC3:
 		{
 			auto parts = cu::string::split(param, ' ');
-			if (parts.size() != 3) return "Invalid parameter '" + param + "'. Wrong amount of numbers for a vec3";
-			if (!isValidValue<float>(parts[0])) return "Invalid parameter '" + param + "'. Wrong amount of numbers for a vec3";
+			if (parts.size() != 3) return "Invalid parameter '" + param + "'. Wrong amount of numbers for a vec3.";
+			if (!isValidValue<float>(parts[0])) return "Invalid parameter '" + param + "'. '" + parts[0] + "' is not a valid number.";
+			if (!isValidValue<float>(parts[1])) return "Invalid parameter '" + param + "'. '" + parts[1] + "' is not a valid number.";
+			if (!isValidValue<float>(parts[2])) return "Invalid parameter '" + param + "'. '" + parts[2] + "' is not a valid number.";
 			
-			//&& isValidValue<float>(parts[0]) && isValidValue<float>(parts[1]) && isValidValue<float>(parts[2])) return "";
-			break;
+			if (attrRange.has_value())
+			{
+				float val0 = std::stof(parts[0]);
+				float val1 = std::stof(parts[1]);
+				float val2 = std::stof(parts[2]);
+
+				if (val0 > attrRange.value().second || val0 < attrRange.value().first)
+					return "Invalid parameter '" + param + "'. '" + parts[0] + "' is not a valid number. Value must be between " + std::to_string(attrRange.value().first) + " and " + std::to_string(attrRange.value().second);
+				if (val1 > attrRange.value().second || val1 < attrRange.value().first)
+					return "Invalid parameter '" + param + "'. '" + parts[1] + "' is not a valid number. Value must be between " + std::to_string(attrRange.value().first) + " and " + std::to_string(attrRange.value().second);
+				if (val2 > attrRange.value().second || val2 < attrRange.value().first)
+					return "Invalid parameter '" + param + "'. '" + parts[2] + "' is not a valid number. Value must be between " + std::to_string(attrRange.value().first) + " and " + std::to_string(attrRange.value().second);
+			}
+			return "";
 		}
 		case ValueType::COLOR:
 		{
@@ -140,9 +150,9 @@ const std::string validType(const AttributeSchema& attr, const std::string& para
 		}
 		case ValueType::ENUM:
 		{
-			if (std::find(attr.enum_values.begin(), attr.enum_values.end(), param) != attr.enum_values.end()) return "";
+			if (std::find(attrEnum.begin(), attrEnum.end(), param) != attrEnum.end()) return "";
 			std::string res = "Invalid parameter '" + param + "'. Parameter must be one of [";
-			for (const std::string& option : attr.enum_values)
+			for (const std::string& option : attrEnum)
 				res += "'" + option + "', ";
 			res[res.size() - 2] = ']';
 			res[res.size() - 1] = '.';
@@ -153,40 +163,22 @@ const std::string validType(const AttributeSchema& attr, const std::string& para
 	return "Invalid parameter type. Required: " + printValueType(type);
 }
 
-/*
-
-struct AttributeSchema
-{
-	std::string name;
-	bool required;
-	ValueType type;
-	std::optional<std::string> default_value;
-
-	std::optional<std::pair<float, float>> range;	// INT/FLOAT/VEC
-	std::vector<std::string> enum_values;			// ENUM
-
-	std::string hover_info;
-	std::string completion_detail;
-
-	std::vector<std::string> examples;
-};
-
-*/
-
-void analyseAttributes(Node& tag, TagSchema& tagSchema, ErrorCollector& errors)
+void analyseAttributes(const Node& tag, const TagSchema& tagSchema, ErrorCollector& errors)
 {
 	auto& attrs = tag.getAttributes();
 	auto& allowedAttrs = tagSchema.attributes;
 
 	for (auto attr = attrs.begin(); attr != attrs.end(); attr++)
 	{
-		if (allowedAttrs.find(attr->first) == allowedAttrs.end())
+		auto attrSchema = allowedAttrs.find(attr->first);
+		if (attrSchema == allowedAttrs.end())
 		{
 			errors.report(TdrError(attr->second.attr_line, attr->second.attr_column, 2, "Unknown property '" + attr->first + "'"));
 			continue ;
 		}
 
-		
+		const std::string typeError = validType(attrSchema->second.type, attrSchema->second.range, attrSchema->second.enum_values, attr->second.content, errors);
+		if (!typeError.empty()) errors.report(TdrError(attr->second.content_line, attr->second.content_column, typeError));
 	}
 
 	for (auto requiredAttr = allowedAttrs.begin(); requiredAttr != allowedAttrs.end(); requiredAttr++)
@@ -200,9 +192,108 @@ void analyseAttributes(Node& tag, TagSchema& tagSchema, ErrorCollector& errors)
 	}
 }
 
-void semanticAnalyzer(Node& ast, ErrorCollector& errors)
-{
+/*
 
+struct TagSchema
+{
+	std::string name;
+	bool required;
+	bool allow_text;
+	std::optional<ValueType> text_type;
+
+	std::map<std::string, AttributeSchema> attributes;
+	std::map<std::string, TagSchema> children;
+	
+	bool allow_multiple;
+
+	std::string hover_info;
+	std::string completion_detail;
+	std::vector<std::string> examples;
+};
+
+*/
+
+void validateMultiplicity(const Node& parent, const TagSchema& parentSchema, ErrorCollector& errors)
+{
+	std::map<std::string, int> tagCounts;
+	
+	for (const auto& child : parent.getChildren())
+		tagCounts[child.getIdentifier()]++;
+	
+	for (const auto& [tagName, count] : tagCounts)
+	{
+		auto tagSchemaPair = parentSchema.children.find(tagName);
+		if (tagSchemaPair != parentSchema.children.end())
+		{
+			if (!tagSchemaPair->second.allow_multiple && count > 1)
+			{
+				auto pos = parent.getNodeBeginPos();
+				errors.report(TdrError(pos.first, pos.second, 1, "Tag '" + tagName + "' appears " + std::to_string(count) + " times but is not allowed to repeat"));
+			}
+		}
+	}
+}
+
+void analyzeNodes(const Node& parent, const TagSchema& parentSchema, ErrorCollector& errors)
+{
+	for (auto& node : parent.getChildren())
+	{
+		auto tagSchemaPair = parentSchema.children.find(node.getIdentifier());
+		if (tagSchemaPair == parentSchema.children.end())
+		{
+			auto pos = node.getNodeBeginPos();
+			errors.report(TdrError(pos.first, pos.second, 1, "Unknown identifier '" + node.getIdentifier() + "'"));
+			continue ;
+		}
+
+		auto& tagSchema = tagSchemaPair->second;
+
+		auto& tokens = node.getTokens();
+		auto pos = node.getNodeBeginPos();
+		for (auto& token : tokens)
+		{
+			if (token.type == TokenType::TEXT)
+			{
+				pos.first = token.line;
+				pos.second = token.column;
+				break;
+			}
+		}
+		if (!tagSchema.allow_text && !node.getText().empty())
+		{
+			errors.report(TdrError(pos.first, pos.second, 1, "Text is not allowed in '" + node.getIdentifier() + "'"));
+		}
+		else if (tagSchema.text_type.has_value())
+		{
+			const std::string typeError = validType(tagSchema.text_type.value(), tagSchema.range, tagSchema.enum_values, node.getText(), errors);
+			if (!typeError.empty()) errors.report(TdrError(pos.first, pos.second, typeError));
+		}
+
+		analyseAttributes(node, tagSchema, errors);
+		analyzeNodes(node, tagSchema, errors);
+	}
+
+	validateMultiplicity(parent, parentSchema, errors);
+
+	for (auto requiredTag = parentSchema.children.begin(); requiredTag != parentSchema.children.end(); requiredTag++)
+	{
+		if (!requiredTag->second.required) continue ;
+		auto childExists = std::any_of(
+			parent.getChildren().begin(), 
+			parent.getChildren().end(),
+			[&requiredTag](const Node& child) { return child.getIdentifier() == requiredTag->first; }
+		);
+		if (!childExists)
+		{
+			auto pos = parent.getNodeBeginPos();
+			errors.report(TdrError(pos.first, pos.second, "Missing required tag '" + requiredTag->first + "'"));
+		}
+	}
+}
+
+void semanticAnalyzer(Node& ast, SceneSchema& sceneSchema, ErrorCollector& errors)
+{
+	analyzeNodes(ast, sceneSchema.root, errors);
 }
 
 }

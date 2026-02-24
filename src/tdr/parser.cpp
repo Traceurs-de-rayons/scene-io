@@ -266,6 +266,7 @@ const std::pair<uint64_t, uint64_t> Node::getNodeBeginPos() const
 	{
 		if (tokens_[i].type == TokenType::IDENTIFIER)
 			return { tokens_[i].line, tokens_[i].column };
+		i++;
 	}
 	return { UINT64_MAX, UINT64_MAX };
 }
