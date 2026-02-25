@@ -41,10 +41,7 @@ ParseResult SceneLanguageService::parse_file(const std::string& path)
 		std::ifstream in(path, std::ios_base::in);
 		if (!in.is_open()) throw TdrError("Cannot open file");
 
-		std::cout << "tttst" << std::endl;
 		auto tokens = lexer(in, errors);
-		std::cout << "tst" << std::endl;
-		print_tokens(tokens);
 		Node ast = parser(tokens, errors);
 
 		SceneSchema sch;

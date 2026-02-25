@@ -48,7 +48,6 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 
 	std::function<std::unique_ptr<Node>()> parseNode = [&]() -> std::unique_ptr<Node>
 	{
-		std::cout << "OEOE" << std::endl;
 		auto eofError = [&]() -> std::unique_ptr<Node>
 		{
 			errors.report(TdrError(peek().line, peek().column, "Unexpected end of file"));
