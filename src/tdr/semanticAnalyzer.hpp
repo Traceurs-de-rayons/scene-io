@@ -8,13 +8,12 @@
 namespace sceneIO::tdr {
 
 template <typename T>
-bool isValidValue(const std::string& s)
+bool isValidValue(const std::string& s, T& value)
 {
 	static_assert(std::is_arithmetic_v<T>, "T must be arithmetic");
 	
 	if (s.empty()) return false;
 
-	T value;
 	auto [ptr, ec] = std::from_chars(
 		s.data(),
 		s.data() + s.size(),

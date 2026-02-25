@@ -42,6 +42,7 @@ public:
 	const std::vector<Token>& getTokens() const { return tokens_; }
 
 	const std::pair<uint64_t, uint64_t> getNodeBeginPos() const;
+	const std::pair<uint64_t, uint64_t> getTextBeginPos() const;
 
 	void print(int nest = 0) const;
 

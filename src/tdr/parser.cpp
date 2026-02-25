@@ -87,7 +87,7 @@ Node parser(std::vector<Token>& list, ErrorCollector& errors)
 				else if (peek().type == TokenType::STRING)
 				{
 					attr.content_line = peek().line;
-					attr.content_column = peek().column;
+					attr.content_column = peek().column + 1;
 					attr.content = peek().value;
 					res->attributes_[propertyName] = attr;
 					advance(res);
@@ -257,6 +257,21 @@ void Node::print(int nest) const
 	}
 }
 
+
+const std::pair<uint64_t, uint64_t> Node::getTextBeginPos() const
+{
+	auto pos = getNodeBeginPos();
+	for (const auto& token : tokens_)
+	{
+		if (token.type == TokenType::TEXT)
+		{
+			pos.first = token.line;
+			pos.second = token.column;
+			break;
+		}
+	}
+	return pos;
+}
 
 const std::pair<uint64_t, uint64_t> Node::getNodeBeginPos() const
 {

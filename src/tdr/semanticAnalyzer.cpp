@@ -89,11 +89,11 @@ const std::string validType(ValueType type, const std::optional<std::pair<float,
 		case ValueType::STRING: return "";
 		case ValueType::FLOAT:
 		{
-			if (!isValidValue<float>(param)) break;
+			float val = 0;
+
+			if (!isValidValue(param, val)) break;
 			if (attrRange.has_value())
 			{
-				float val = std::stof(param);
-				
 				if (val > attrRange.value().second || val < attrRange.value().first)
 					return "Invalid parameter '" + param + "'. Value must be between " + std::to_string(attrRange.value().first) + " and " + std::to_string(attrRange.value().second);
 			}
@@ -101,11 +101,10 @@ const std::string validType(ValueType type, const std::optional<std::pair<float,
 		}
 		case ValueType::INT:
 		{
-			if (!isValidValue<int>(param)) break;
+			int val = 0;
+			if (!isValidValue(param, val)) break;
 			if (attrRange.has_value())
 			{
-				int val = std::stoi(param);
-				
 				if (val > attrRange.value().second || val < attrRange.value().first)
 					return "Invalid parameter '" + param + "'. Value must be between " + std::to_string(attrRange.value().first) + " and " + std::to_string(attrRange.value().second);
 			}
@@ -119,17 +118,18 @@ const std::string validType(ValueType type, const std::optional<std::pair<float,
 		case ValueType::VEC3:
 		{
 			auto parts = cu::string::split(param, ' ');
+
+			float val0 = 0;
+			float val1 = 0;
+			float val2 = 0;
+
 			if (parts.size() != 3) return "Invalid parameter '" + param + "'. Wrong amount of numbers for a vec3.";
-			if (!isValidValue<float>(parts[0])) return "Invalid parameter '" + param + "'. '" + parts[0] + "' is not a valid number.";
-			if (!isValidValue<float>(parts[1])) return "Invalid parameter '" + param + "'. '" + parts[1] + "' is not a valid number.";
-			if (!isValidValue<float>(parts[2])) return "Invalid parameter '" + param + "'. '" + parts[2] + "' is not a valid number.";
+			if (!isValidValue(parts[0], val0)) return "Invalid parameter '" + param + "'. '" + parts[0] + "' is not a valid number.";
+			if (!isValidValue(parts[1], val1)) return "Invalid parameter '" + param + "'. '" + parts[1] + "' is not a valid number.";
+			if (!isValidValue(parts[2], val2)) return "Invalid parameter '" + param + "'. '" + parts[2] + "' is not a valid number.";
 			
 			if (attrRange.has_value())
 			{
-				float val0 = std::stof(parts[0]);
-				float val1 = std::stof(parts[1]);
-				float val2 = std::stof(parts[2]);
-
 				if (val0 > attrRange.value().second || val0 < attrRange.value().first)
 					return "Invalid parameter '" + param + "'. '" + parts[0] + "' is not a valid number. Value must be between " + std::to_string(attrRange.value().first) + " and " + std::to_string(attrRange.value().second);
 				if (val1 > attrRange.value().second || val1 < attrRange.value().first)
@@ -248,17 +248,7 @@ void analyzeNodes(const Node& parent, const TagSchema& parentSchema, ErrorCollec
 
 		auto& tagSchema = tagSchemaPair->second;
 
-		auto& tokens = node.getTokens();
-		auto pos = node.getNodeBeginPos();
-		for (auto& token : tokens)
-		{
-			if (token.type == TokenType::TEXT)
-			{
-				pos.first = token.line;
-				pos.second = token.column;
-				break;
-			}
-		}
+		auto pos = node.getTextBeginPos();
 		if (!tagSchema.allow_text && !node.getText().empty())
 		{
 			errors.report(TdrError(pos.first, pos.second, 1, "Text is not allowed in '" + node.getIdentifier() + "'"));
