@@ -125,8 +125,11 @@ std::vector<Token> lexer(std::istream& in, ErrorCollector& errors)
 		{
 			if (peek() == '/')
 			{
-				skip_comment();
-				continue;
+				if (peek_next() == '/')
+				{
+					skip_comment();
+					continue;
+				}
 			}
 			advance();
 			value += c;
