@@ -4,6 +4,7 @@
 #include <vector>
 #include <optional>
 #include <map>
+#include <functional>
 
 namespace sceneIO::tdr {
 
@@ -37,6 +38,24 @@ struct AttributeSchema
 	std::vector<std::string> examples;
 };
 
+struct TagSchema;
+
+struct ConditionalVariant
+{
+	std::string discriminator_attr;
+	std::string discriminator_value;
+
+	std::map<std::string, AttributeSchema> attributes;
+	std::map<std::string, TagSchema> children;
+
+	bool allow_text = false;
+	std::optional<ValueType> text_type;
+
+	std::string hover_info;
+
+	void include(const std::map<std::string, TagSchema>& group);
+};
+
 struct TagSchema
 {
 	std::string name;
@@ -55,6 +74,12 @@ struct TagSchema
 	std::vector<std::string> examples;
 
 	bool allow_multiple;
+
+	std::vector<ConditionalVariant> variants;
+	std::optional<std::pair<std::string, std::string> > fromCondition;
+
+	void include(const std::map<std::string, TagSchema>& group);
+	const ConditionalVariant* getMatchingVariant(const std::string& discriminator_value) const;
 };
 
 class SceneSchema
@@ -62,13 +87,20 @@ class SceneSchema
 
 private:
 	void build_schema();
+	void build_tag_groups();
 
 	const TagSchema *findTagRecursive(const TagSchema& tag, const std::string& tag_name) const;
 
 public:
 	TagSchema root;
+
+	std::map<std::string, std::map<std::string, TagSchema>> tag_groups;
 	
-	SceneSchema() { build_schema(); }
+	SceneSchema()
+	{
+		build_tag_groups();
+		build_schema();
+	}
 	~SceneSchema() = default;
 
 	const TagSchema *getTagSchema(const std::string& tag_name) const;

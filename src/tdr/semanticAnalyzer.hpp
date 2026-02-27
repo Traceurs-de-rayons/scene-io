@@ -2,6 +2,7 @@
 
 #include "tdr/parser.hpp"
 #include "tdr/error.hpp"
+#include "tdr/SceneSchema.hpp"
 
 #include <charconv>
 
@@ -22,6 +23,8 @@ bool isValidValue(const std::string& s, T& value)
 
 	return ec == std::errc() && ptr == s.data() + s.size();
 }
+
+TagSchema buildEffectiveSchema(const TagSchema& base, const Node& node);
 
 void semanticAnalyzer(Node& ast, SceneSchema& sceneSchema, ErrorCollector& errors);
 

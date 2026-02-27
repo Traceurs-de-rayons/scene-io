@@ -234,6 +234,41 @@ void validateMultiplicity(const Node& parent, const TagSchema& parentSchema, Err
 	}
 }
 
+TagSchema buildEffectiveSchema(const TagSchema& base, const Node& node)
+{
+	if (base.variants.empty())
+		return base;
+
+	auto& attrs = node.getAttributes();
+
+	for (const auto& variant : base.variants)
+	{
+		auto it = attrs.find(variant.discriminator_attr);
+		if (it != attrs.end() && it->second.content == variant.discriminator_value)
+		{
+			TagSchema effective = base;
+
+ 			for (const auto& [name, attr] : variant.attributes)
+				effective.attributes[name] = attr;
+
+			for (const auto& [name, child] : variant.children)
+				effective.children[name] = child;
+
+			if (variant.allow_text)
+			{
+				effective.allow_text = variant.allow_text;
+				effective.text_type = variant.text_type;
+			}
+
+			effective.variants.clear();
+			effective.fromCondition = std::make_pair(variant.discriminator_attr, variant.discriminator_value);
+
+			return effective;
+		}
+	}
+	return base;
+}
+
 void analyzeNodes(const Node& parent, const TagSchema& parentSchema, ErrorCollector& errors)
 {
 	for (auto& node : parent.getChildren())
@@ -246,26 +281,28 @@ void analyzeNodes(const Node& parent, const TagSchema& parentSchema, ErrorCollec
 			continue ;
 		}
 
-		auto& tagSchema = tagSchemaPair->second;
+		TagSchema effectiveSchema = buildEffectiveSchema(tagSchemaPair->second, node);
 
 		auto pos = node.getTextBeginPos();
-		if (!tagSchema.allow_text && !node.getText().empty())
+		if (!effectiveSchema.allow_text && !node.getText().empty())
 		{
 			errors.report(TdrError(pos.first, pos.second, 1, "Text is not allowed in '" + node.getIdentifier() + "'"));
 		}
-		else if (tagSchema.text_type.has_value())
+		else if (effectiveSchema.text_type.has_value())
 		{
-			const std::string typeError = validType(tagSchema.text_type.value(), tagSchema.range, tagSchema.enum_values, node.getText(), errors);
+			const std::string typeError = validType(effectiveSchema.text_type.value(), effectiveSchema.range, effectiveSchema.enum_values, node.getText(), errors);
 			if (!typeError.empty()) errors.report(TdrError(pos.first, pos.second, typeError));
 		}
 
-		analyseAttributes(node, tagSchema, errors);
-		analyzeNodes(node, tagSchema, errors);
+		analyseAttributes(node, effectiveSchema, errors);
+		analyzeNodes(node, effectiveSchema, errors);
 	}
 
 	validateMultiplicity(parent, parentSchema, errors);
 
-	for (auto requiredTag = parentSchema.children.begin(); requiredTag != parentSchema.children.end(); requiredTag++)
+	TagSchema effectiveParentSchema = buildEffectiveSchema(parentSchema, parent);
+
+	for (auto requiredTag = effectiveParentSchema.children.begin(); requiredTag != effectiveParentSchema.children.end(); requiredTag++)
 	{
 		if (!requiredTag->second.required) continue ;
 		auto childExists = std::any_of(
@@ -279,6 +316,53 @@ void analyzeNodes(const Node& parent, const TagSchema& parentSchema, ErrorCollec
 			errors.report(TdrError(pos.first, pos.second, "Missing required tag '" + requiredTag->first + "'"));
 		}
 	}
+
+	// // Also check required tags/attrs from matching variants of each child
+	// for (auto& node : parent.getChildren())
+	// {
+	// 	auto tagSchemaPair = parentSchema.children.find(node.getIdentifier());
+	// 	if (tagSchemaPair == parentSchema.children.end())
+	// 		continue;
+
+	// 	TagSchema effectiveSchema = buildEffectiveSchema(tagSchemaPair->second, node);
+
+	// 	// Check required children from variant
+	// 	for (const auto& [childName, childSchema] : effectiveSchema.children)
+	// 	{
+	// 		if (!childSchema.required) continue;
+	// 		// Skip if already in base (handled above)
+	// 		if (tagSchemaPair->second.children.count(childName))
+	// 			continue;
+
+	// 		const std::string& cn = childName;
+	// 		auto childExists = std::any_of(
+	// 			node.getChildren().begin(),
+	// 			node.getChildren().end(),
+	// 			[&cn](const Node& child) { return child.getIdentifier() == cn; }
+	// 		);
+	// 		if (!childExists)
+	// 		{
+	// 			auto pos = node.getNodeBeginPos();
+	// 			errors.report(TdrError(pos.first, pos.second, "Missing required tag '" + cn + "' (required for " + tagSchemaPair->second.name + " variant)"));
+	// 		}
+	// 	}
+
+	// 	// Check required attributes from variant
+	// 	for (const auto& [attrName, attrSchema] : effectiveSchema.attributes)
+	// 	{
+	// 		if (!attrSchema.required) continue;
+	// 		if (tagSchemaPair->second.attributes.count(attrName))
+	// 			continue;
+
+	// 		const std::string& an = attrName;
+	// 		auto& attrs = node.getAttributes();
+	// 		if (attrs.find(an) == attrs.end())
+	// 		{
+	// 			auto pos = node.getNodeBeginPos();
+	// 			errors.report(TdrError(pos.first, pos.second, "Missing required property '" + an + "' (required for " + tagSchemaPair->second.name + " variant)"));
+	// 		}
+	// 	}
+	// }
 }
 
 void semanticAnalyzer(Node& ast, SceneSchema& sceneSchema, ErrorCollector& errors)
