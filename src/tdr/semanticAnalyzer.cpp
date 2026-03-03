@@ -178,7 +178,7 @@ void analyseAttributes(const Node& tag, const TagSchema& tagSchema, ErrorCollect
 		}
 
 		const std::string typeError = validType(attrSchema->second.type, attrSchema->second.range, attrSchema->second.enum_values, attr->second.content, errors);
-		if (!typeError.empty()) errors.report(TdrError(attr->second.content_line, attr->second.content_column, typeError));
+		if (!typeError.empty()) errors.report(TdrError(attr->second.content_line, attr->second.content_column, attrSchema->second.type == ValueType::FILEPATH ? 2 : 1, typeError));
 	}
 
 	for (auto requiredAttr = allowedAttrs.begin(); requiredAttr != allowedAttrs.end(); requiredAttr++)
@@ -260,6 +260,9 @@ TagSchema buildEffectiveSchema(const TagSchema& base, const Node& node)
 				effective.text_type = variant.text_type;
 			}
 
+			effective.enum_values = variant.enum_values;
+			effective.range = variant.range;
+
 			effective.variants.clear();
 			effective.fromCondition = std::make_pair(variant.discriminator_attr, variant.discriminator_value);
 
@@ -291,7 +294,7 @@ void analyzeNodes(const Node& parent, const TagSchema& parentSchema, ErrorCollec
 		else if (effectiveSchema.text_type.has_value())
 		{
 			const std::string typeError = validType(effectiveSchema.text_type.value(), effectiveSchema.range, effectiveSchema.enum_values, node.getText(), errors);
-			if (!typeError.empty()) errors.report(TdrError(pos.first, pos.second, typeError));
+			if (!typeError.empty()) errors.report(TdrError(pos.first, pos.second, effectiveSchema.text_type.value() == ValueType::FILEPATH ? 2 : 1, typeError));
 		}
 
 		analyseAttributes(node, effectiveSchema, errors);
@@ -316,53 +319,6 @@ void analyzeNodes(const Node& parent, const TagSchema& parentSchema, ErrorCollec
 			errors.report(TdrError(pos.first, pos.second, "Missing required tag '" + requiredTag->first + "'"));
 		}
 	}
-
-	// // Also check required tags/attrs from matching variants of each child
-	// for (auto& node : parent.getChildren())
-	// {
-	// 	auto tagSchemaPair = parentSchema.children.find(node.getIdentifier());
-	// 	if (tagSchemaPair == parentSchema.children.end())
-	// 		continue;
-
-	// 	TagSchema effectiveSchema = buildEffectiveSchema(tagSchemaPair->second, node);
-
-	// 	// Check required children from variant
-	// 	for (const auto& [childName, childSchema] : effectiveSchema.children)
-	// 	{
-	// 		if (!childSchema.required) continue;
-	// 		// Skip if already in base (handled above)
-	// 		if (tagSchemaPair->second.children.count(childName))
-	// 			continue;
-
-	// 		const std::string& cn = childName;
-	// 		auto childExists = std::any_of(
-	// 			node.getChildren().begin(),
-	// 			node.getChildren().end(),
-	// 			[&cn](const Node& child) { return child.getIdentifier() == cn; }
-	// 		);
-	// 		if (!childExists)
-	// 		{
-	// 			auto pos = node.getNodeBeginPos();
-	// 			errors.report(TdrError(pos.first, pos.second, "Missing required tag '" + cn + "' (required for " + tagSchemaPair->second.name + " variant)"));
-	// 		}
-	// 	}
-
-	// 	// Check required attributes from variant
-	// 	for (const auto& [attrName, attrSchema] : effectiveSchema.attributes)
-	// 	{
-	// 		if (!attrSchema.required) continue;
-	// 		if (tagSchemaPair->second.attributes.count(attrName))
-	// 			continue;
-
-	// 		const std::string& an = attrName;
-	// 		auto& attrs = node.getAttributes();
-	// 		if (attrs.find(an) == attrs.end())
-	// 		{
-	// 			auto pos = node.getNodeBeginPos();
-	// 			errors.report(TdrError(pos.first, pos.second, "Missing required property '" + an + "' (required for " + tagSchemaPair->second.name + " variant)"));
-	// 		}
-	// 	}
-	// }
 }
 
 void semanticAnalyzer(Node& ast, SceneSchema& sceneSchema, ErrorCollector& errors)

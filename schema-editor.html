@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Schema Editor</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Syne:wght@400;600;700;800&display=swap');
+  :root {
+    --bg:#0d0f14;--surface:#141720;--surface2:#1a1e2b;--surface3:#202535;
+    --border:#2a2f42;--border2:#353a52;--accent:#5d7cff;--green:#34d399;
+    --red:#f87171;--cyan:#22d3ee;--yellow:#fbbf24;--orange:#fb923c;
+    --text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;
+    --tag-color:#5d7cff;--attr-color:#34d399;--variant-color:#8b5cf6;--group-color:#fb923c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Syne',sans-serif;background:var(--bg);color:var(--text);height:100vh;
+    display:grid;grid-template-rows:48px 1fr;grid-template-columns:290px 1fr 390px;overflow:hidden}
+  header{grid-column:1/-1;background:var(--surface);border-bottom:1px solid var(--border);
+    display:flex;align-items:center;padding:0 16px;gap:12px}
+  .logo{font-size:14px;font-weight:800;letter-spacing:.08em;color:var(--accent);text-transform:uppercase}
+  .logo span{color:var(--text2)}
+  .top-actions{margin-left:auto;display:flex;gap:8px}
+  .btn{font-family:'Syne',sans-serif;font-size:12px;font-weight:600;padding:6px 14px;border-radius:6px;
+    border:1px solid var(--border2);background:var(--surface2);color:var(--text2);cursor:pointer;transition:all .15s;letter-spacing:.03em}
+  .btn:hover{background:var(--surface3);color:var(--text);border-color:var(--accent)}
+  .btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+  .btn.primary:hover{background:#4a6ae8}
+  .btn.danger{color:var(--red);border-color:transparent}
+  .btn.danger:hover{background:rgba(248,113,113,.1);border-color:var(--red)}
+  #tree-panel{background:var(--surface);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+  .panel-header{padding:10px 14px 9px;font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--text3);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+  .panel-header-actions{display:flex;gap:6px}
+  .tree{padding:6px 0}
+  .tree-section-label{font-size:9px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--text3);padding:10px 14px 4px;display:flex;align-items:center;justify-content:space-between}
+  .tree-item{position:relative;user-select:none}
+  .tree-row{display:flex;align-items:center;padding:5px 8px 5px 0;cursor:pointer;border-radius:4px;
+    margin:0 6px 1px;transition:background .1s;gap:4px}
+  .tree-row:hover{background:var(--surface2)}
+  .tree-row.selected{background:rgba(93,124,255,.15)}
+  .tree-row.selected .tree-label{color:var(--accent)}
+  .tree-toggle{width:16px;height:16px;flex-shrink:0;display:flex;align-items:center;justify-content:center;
+    font-size:8px;color:var(--text3);transition:transform .15s}
+  .tree-toggle.open{transform:rotate(90deg)}
+  .tree-badge{font-family:'JetBrains Mono',monospace;font-size:9px;padding:1px 5px;border-radius:3px;flex-shrink:0;font-weight:600}
+  .badge-tag{background:rgba(93,124,255,.2);color:var(--tag-color)}
+  .badge-attr{background:rgba(52,211,153,.2);color:var(--attr-color)}
+  .badge-variant{background:rgba(139,92,246,.2);color:var(--variant-color)}
+  .badge-group{background:rgba(251,163,60,.2);color:var(--group-color)}
+  .tree-label{font-size:13px;font-weight:600;color:var(--text);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tree-label.unnamed{color:var(--text3);font-style:italic}
+  .tree-req{width:6px;height:6px;border-radius:50%;background:var(--red);flex-shrink:0;opacity:.7}
+  .tree-children{display:none}
+  .tree-children.open{display:block}
+  .type-indicator{font-family:'JetBrains Mono',monospace;font-size:9px;padding:1px 5px;border-radius:3px;
+    background:rgba(251,191,36,.15);color:var(--yellow);margin-left:auto}
+  .inc-badge{font-family:'JetBrains Mono',monospace;font-size:9px;padding:1px 5px;border-radius:10px;
+    background:rgba(251,163,60,.12);color:var(--group-color);border:1px solid rgba(251,163,60,.25)}
+  #form-panel{background:var(--bg);overflow-y:auto;padding:20px}
+  .empty-state{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--text3)}
+  .empty-state .icon{font-size:40px}
+  .empty-state p{font-size:13px}
+  .form-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;margin-bottom:14px;overflow:hidden}
+  .form-section-header{padding:10px 14px;font-size:10px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--text3);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+  .form-section-header .dot{width:7px;height:7px;border-radius:50%}
+  .form-body{padding:14px;display:flex;flex-direction:column;gap:12px}
+  .field{display:flex;flex-direction:column;gap:5px}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px}
+  label .req-star{color:var(--red)}
+  input[type=text],input[type=number],textarea,select{font-family:'JetBrains Mono',monospace;font-size:12px;
+    background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);
+    padding:8px 10px;outline:none;transition:border-color .15s;width:100%}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+  textarea{resize:vertical;min-height:60px}
+  select option{background:var(--surface2)}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0}
+  .toggle-label{font-size:13px;font-weight:600;color:var(--text2)}
+  .toggle{width:36px;height:20px;background:var(--surface3);border-radius:10px;cursor:pointer;
+    position:relative;border:1px solid var(--border2);transition:background .2s;flex-shrink:0}
+  .toggle.on{background:var(--accent);border-color:var(--accent)}
+  .toggle::after{content:'';position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+    background:var(--text3);transition:transform .2s,background .2s}
+  .toggle.on::after{transform:translateX(16px);background:#fff}
+  .list-wrap{display:flex;flex-direction:column;gap:6px}
+  .list-item{display:flex;gap:6px;align-items:center}
+  .list-item input{flex:1}
+  .remove-btn{width:24px;height:24px;border-radius:4px;background:transparent;border:1px solid var(--border);
+    color:var(--text3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;transition:all .15s;flex-shrink:0}
+  .remove-btn:hover{background:rgba(248,113,113,.15);color:var(--red);border-color:var(--red)}
+  .add-btn{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;padding:6px 10px;border-radius:6px;
+    border:1px dashed var(--border2);background:transparent;color:var(--text3);cursor:pointer;
+    transition:all .15s;letter-spacing:.04em;text-align:center}
+  .add-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(93,124,255,.05)}
+  .range-row{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .action-bar{display:flex;gap:8px;flex-wrap:wrap;padding:14px;border-top:1px solid var(--border);background:var(--surface)}
+  .form-title{font-size:18px;font-weight:800;margin-bottom:4px;display:flex;align-items:center;gap:10px}
+  .breadcrumb{font-size:11px;color:var(--text3);margin-bottom:16px;display:flex;align-items:center;gap:4px;flex-wrap:wrap}
+  .breadcrumb .bcrumb{cursor:pointer;color:var(--text3)}
+  .breadcrumb .bcrumb:hover{color:var(--accent)}
+  .breadcrumb .sep{color:var(--border2)}
+  .breadcrumb .current{color:var(--text2);font-weight:600}
+  .include-pill{display:inline-flex;align-items:center;gap:4px;font-family:'JetBrains Mono',monospace;font-size:9px;
+    padding:2px 6px;border-radius:10px;background:rgba(251,163,60,.1);color:var(--group-color);
+    border:1px solid rgba(251,163,60,.25);margin:2px}
+  .include-pill button{background:none;border:none;color:var(--text3);cursor:pointer;font-size:11px;line-height:1;padding:0}
+  .include-pill button:hover{color:var(--red)}
+  .include-select-row{display:flex;gap:8px;align-items:center}
+  .include-select-row select{flex:1}
+  #output-panel{background:var(--surface);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+  .code-area{flex:1;overflow-y:auto;padding:14px}
+  pre{font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.7;color:var(--text2);white-space:pre;word-break:normal}
+  .ck{color:#569cd6}.cs{color:#ce9178}.cc{color:#6a9955}.ct{color:#4ec9b0}.cn{color:#b5cea8}
+  ::-webkit-scrollbar{width:5px;height:5px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+  /* Collapsible output panel */
+  body.output-collapsed{grid-template-columns:290px 1fr 58px}
+  #output-panel.collapsed{height: 48px}
+  #output-panel.collapsed .code-area{display:none}
+  body.output-collapsed #output-panel .panel-header .panel-header-title{display:none}
+  body.output-collapsed #output-panel .panel-header #output-lines{display:none}
+  .panel-toggle{width:28px;height:28px;border-radius:6px;border:1px solid var(--border);background:transparent;color:var(--text3);display:flex;align-items:center;justify-content:center;cursor:pointer}
+  .panel-toggle:hover{border-color:var(--accent);color:var(--text)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">Schema<span>Editor</span></div>
+  <button class="btn" onclick="importJSON()">Import JSON</button>
+  <button class="btn" onclick="exportJSON()">Export JSON</button>
+  <div class="top-actions">
+    <button class="btn primary" id="copy-btn" onclick="copyCode()">Copy C++</button>
+  </div>
+</header>
+
+<div id="tree-panel">
+  <div class="panel-header">
+    Structure
+    <div class="panel-header-actions">
+      <button class="btn" style="padding:3px 8px;font-size:10px;" onclick="addTagGroup()">+ Group</button>
+      <button class="btn" style="padding:3px 8px;font-size:10px;" onclick="addRootTag()">+ Tag</button>
+    </div>
+  </div>
+  <div class="tree" id="tree-root"></div>
+</div>
+
+<div id="form-panel">
+  <div class="empty-state" id="empty-state">
+    <div class="icon">⬡</div>
+    <p>Select an element in the tree to edit it</p>
+    <p style="font-size:11px;margin-top:4px;">or <span style="color:var(--accent);cursor:pointer;" onclick="addRootTag()">add a root tag</span> to start</p>
+  </div>
+  <div id="form-content" style="display:none;"></div>
+</div>
+
+<div id="output-panel">
+  <div class="panel-header">
+    <span class="panel-header-title">C++ Output</span>
+    <div style="display:flex;align-items:center;gap:8px">
+      <span style="color:var(--text3);font-size:10px;font-weight:400;" id="output-lines">0 lines</span>
+      <button class="btn panel-toggle" id="output-toggle" onclick="toggleOutputPanel()" title="Toggle output panel">◀</button>
+    </div>
+  </div>
+  <div class="code-area"><pre id="cpp-output"></pre></div>
+</div>
+
+<input type="file" id="import-file" accept=".json" style="display:none;" onchange="handleImport(event)">
+
+<script>
+// ===================== DATA =====================
+const VALUE_TYPES = ['STRING','INT','FLOAT','BOOL','VEC3','COLOR','ENUM','FILEPATH'];
+let schema = { tags:{}, tag_groups:{} };
+let selectedPath = null;
+let expandedPaths = new Set();
+let variantCounter = 0;
+
+// ===================== PATH UTILS =====================
+function sp(s){ const i=s.indexOf(':'); return [s.slice(0,i), s.slice(i+1)]; }
+
+function resolveNode(path) {
+  if (!path || !path.length) return null;
+  const [t0,k0] = sp(path[0]);
+  let node;
+  if (t0==='group') { node = schema.tag_groups[k0]; if (!node) return null; }
+  else if (t0==='tag') { node = schema.tags[k0]; if (!node) return null; }
+  else return null;
+  for (let i=1; i<path.length; i++) {
+    const [t,k] = sp(path[i]);
+    if (!node) return null;
+    if (t==='gtag') node = node[k];
+    else if (t==='tag') node = (node.children||{})[k];
+    else if (t==='attr') node = (node.attributes||{})[k];
+    else if (t==='variant') node = (node.variants||[])[parseInt(k)];
+    else return null;
+  }
+  return node;
+}
+
+function resolveParentAndKey(path) {
+  if (!path || path.length===0) return null;
+  const [t,k] = sp(path[path.length-1]);
+  if (path.length===1) {
+    if (t==='tag') return {parent:schema.tags, key:k, type:t};
+    if (t==='group') return {parent:schema.tag_groups, key:k, type:t};
+  }
+  const parent = resolveNode(path.slice(0,-1));
+  if (!parent) return null;
+  if (t==='tag') return {parent:parent.children, key:k, type:t};
+  if (t==='gtag') {
+    // parent is the group object itself
+    const [,gk] = sp(path[path.length-2]);
+    return {parent:schema.tag_groups[gk], key:k, type:t};
+  }
+  if (t==='attr') return {parent:parent.attributes, key:k, type:t};
+  if (t==='variant') return {parent:parent.variants, key:parseInt(k), type:t};
+  return null;
+}
+
+// ===================== DEFAULTS =====================
+function newTag(name='') {
+  return {_type:'tag',name,required:false,allow_text:false,text_type:null,range:null,
+    hover_info:'',completion_detail:'',examples:[],allow_multiple:false,
+    attributes:{},children:{},variants:[],include:[]};
+}
+function newAttr(name='') {
+  return {_type:'attribute',name,required:false,type:'STRING',default_value:'',
+    range:null,enum_values:[],hover_info:'',completion_detail:'',examples:[]};
+}
+function newVariant() {
+  return {_type:'variant',discriminator_attr:'',discriminator_value:'',hover_info:'',
+    attributes:{},children:{},include:[], allow_text:false, text_type:null, range:null, enum_values:[]};
+}
+function genId() { return Math.random().toString(36).substr(2,9); }
+
+// ===================== TREE =====================
+function renderTree() {
+  const root = document.getElementById('tree-root');
+  root.innerHTML = '';
+  const groups = schema.tag_groups||{};
+  const tags = schema.tags||{};
+  if (Object.keys(groups).length) {
+    const sl = el('div','tree-section-label'); sl.textContent='Tag Groups'; root.appendChild(sl);
+    for (const [gn,g] of Object.entries(groups)) root.appendChild(treeGroup(gn,g,[`group:${gn}`],0));
+    root.appendChild(el('div','',{style:'height:4px'}));
+  }
+  if (Object.keys(tags).length) {
+    const sl = el('div','tree-section-label'); sl.textContent='Root Tags'; root.appendChild(sl);
+    for (const [n,t] of Object.entries(tags)) root.appendChild(treeTag(t,[`tag:${n}`],0));
+  }
+  if (!Object.keys(groups).length && !Object.keys(tags).length) {
+    const d=el('div','',{style:'padding:20px 14px;color:var(--text3);font-size:12px'});
+    d.textContent='No elements yet.'; root.appendChild(d);
+  }
+}
+
+function treeGroup(gn, group, path, depth) {
+  const pathStr = path.join('/');
+  const expanded = expandedPaths.has(pathStr);
+  const tagKeys = Object.keys(group);
+  const item = el('div','tree-item');
+  const row = el('div','tree-row');
+  row.style.paddingLeft=(depth*16+8)+'px';
+  row.appendChild(toggleArrow(tagKeys.length>0, expanded));
+  row.appendChild(badge('grp','badge-group'));
+  const lbl=el('span','tree-label'); lbl.textContent=gn; row.appendChild(lbl);
+  row.onclick=e=>{e.stopPropagation();selectNode(path);if(tagKeys.length)toggleExpand(pathStr);};
+  item.appendChild(row);
+  const ch=el('div','tree-children'+(expanded?' open':''));
+  for (const [tn,t] of Object.entries(group)) ch.appendChild(treeTag(t,[...path,`gtag:${tn}`],depth+1));
+  item.appendChild(ch); return item;
+}
+
+function treeTag(tag, path, depth) {
+  const pathStr=path.join('/');
+  const isSel=selectedPath&&selectedPath.join('/')=== pathStr;
+  const expanded=expandedPaths.has(pathStr);
+  const hasCh=Object.keys(tag.children||{}).length||Object.keys(tag.attributes||{}).length||(tag.variants||[]).length;
+  const item=el('div','tree-item');
+  const row=el('div','tree-row'+(isSel?' selected':''));
+  row.style.paddingLeft=(depth*16+8)+'px';
+  row.appendChild(toggleArrow(hasCh,expanded));
+  row.appendChild(badge('tag','badge-tag'));
+  const lbl=el('span','tree-label'+(tag.name?'':' unnamed')); lbl.textContent=tag.name||'unnamed'; row.appendChild(lbl);
+  (tag.include||[]).forEach(g=>{const p=el('span','inc-badge');p.textContent='+'+g;row.appendChild(p);});
+  if(tag.required){const r=el('div','tree-req');row.appendChild(r);}
+  if(tag.allow_multiple){const m=el('span','',{style:'color:var(--text3);font-size:10px;font-family:monospace'});m.textContent='[]';row.appendChild(m);}
+  row.onclick=e=>{e.stopPropagation();selectNode(path);if(hasCh)toggleExpand(pathStr);};
+  item.appendChild(row);
+  const ch=el('div','tree-children'+(expanded?' open':''));
+  for(const[an,a] of Object.entries(tag.attributes||{})) ch.appendChild(treeAttr(a,[...path,`attr:${an}`],depth+1));
+  (tag.variants||[]).forEach((v,i)=>ch.appendChild(treeVariant(v,[...path,`variant:${i}`],depth+1)));
+  for(const[cn,c] of Object.entries(tag.children||{})) ch.appendChild(treeTag(c,[...path,`tag:${cn}`],depth+1));
+  item.appendChild(ch); return item;
+}
+
+function treeAttr(attr, path, depth) {
+  const pathStr=path.join('/');
+  const isSel=selectedPath&&selectedPath.join('/')=== pathStr;
+  const item=el('div','tree-item');
+  const row=el('div','tree-row'+(isSel?' selected':''));
+  row.style.paddingLeft=(depth*16+8)+'px';
+  row.appendChild(toggleArrow(false,false));
+  row.appendChild(badge('attr','badge-attr'));
+  const lbl=el('span','tree-label'+(attr.name?'':' unnamed'));lbl.textContent=attr.name||'unnamed';row.appendChild(lbl);
+  if(attr.required){const r=el('div','tree-req');row.appendChild(r);}
+  const ti=el('span','type-indicator');ti.textContent=attr.type||'STR';row.appendChild(ti);
+  row.onclick=e=>{e.stopPropagation();selectNode(path);};
+  item.appendChild(row); return item;
+}
+
+function treeVariant(variant, path, depth) {
+  const pathStr=path.join('/');
+  const isSel=selectedPath&&selectedPath.join('/')=== pathStr;
+  const expanded=expandedPaths.has(pathStr);
+  const hasCh=Object.keys(variant.children||{}).length||Object.keys(variant.attributes||{}).length;
+  const item=el('div','tree-item');
+  const row=el('div','tree-row'+(isSel?' selected':''));
+  row.style.paddingLeft=(depth*16+8)+'px';
+  row.appendChild(toggleArrow(hasCh,expanded));
+  row.appendChild(badge('if','badge-variant'));
+  const lbl=el('span','tree-label');
+  lbl.style.color='var(--variant-color)';
+  lbl.textContent=variant.discriminator_value?`when ${variant.discriminator_attr}="${variant.discriminator_value}"`:'variant';
+  row.appendChild(lbl);
+  (variant.include||[]).forEach(g=>{const p=el('span','inc-badge');p.textContent='+'+g;row.appendChild(p);});
+  row.onclick=e=>{e.stopPropagation();selectNode(path);if(hasCh)toggleExpand(pathStr);};
+  item.appendChild(row);
+  const ch=el('div','tree-children'+(expanded?' open':''));
+  for(const[an,a] of Object.entries(variant.attributes||{})) ch.appendChild(treeAttr(a,[...path,`attr:${an}`],depth+1));
+  for(const[cn,c] of Object.entries(variant.children||{})) ch.appendChild(treeTag(c,[...path,`tag:${cn}`],depth+1));
+  item.appendChild(ch); return item;
+}
+
+function toggleArrow(has, open) {
+  const d=el('div','tree-toggle'+(open?' open':''));
+  d.textContent='▶'; if(!has)d.style.visibility='hidden';
+  return d;
+}
+function badge(text, cls) {
+  const s=el('span','tree-badge '+cls); s.textContent=text; return s;
+}
+function el(tag, className='', attrs={}) {
+  const e=document.createElement(tag);
+  if(className) e.className=className;
+  for(const[k,v] of Object.entries(attrs)) e.setAttribute(k,v);
+  return e;
+}
+function toggleExpand(pathStr) {
+  expandedPaths.has(pathStr)?expandedPaths.delete(pathStr):expandedPaths.add(pathStr);
+  renderTree();
+}
+function selectNode(path) { selectedPath=[...path]; renderTree(); renderForm(); }
+
+// ===================== FORM =====================
+function renderForm() {
+  const node=resolveNode(selectedPath);
+  const empty=document.getElementById('empty-state');
+  const content=document.getElementById('form-content');
+  if(!node){empty.style.display='flex';content.style.display='none';return;}
+  empty.style.display='none';content.style.display='block';content.innerHTML='';
+
+  // breadcrumb
+  const bc=el('div','breadcrumb');
+  selectedPath.forEach((p,i)=>{
+    if(i>0){const sep=el('span','sep');sep.textContent='›';bc.appendChild(sep);}
+    const[,k]=sp(p);
+    const s=el('span',i===selectedPath.length-1?'current':'bcrumb');
+    s.textContent=k;
+    if(i<selectedPath.length-1)s.onclick=()=>selectNode(selectedPath.slice(0,i+1));
+    bc.appendChild(s);
+  });
+  content.appendChild(bc);
+
+  const [t]=sp(selectedPath[selectedPath.length-1]);
+  if(t==='group') formGroup(node,content);
+  else if(t==='tag'||t==='gtag') formTag(node,content);
+  else if(t==='attr') formAttr(node,content);
+  else if(t==='variant') formVariant(node,content);
+  generateCpp();
+}
+
+// -- helpers
+function mkField(labelText, inputEl, required=false) {
+  const f=el('div','field');
+  const lb=el('label');lb.textContent=labelText;
+  if(required){const s=el('span','req-star');s.textContent='*';lb.appendChild(s);}
+  f.appendChild(lb);f.appendChild(inputEl);return f;
+}
+function mkText(val, cb, ph='') {
+  const e=el('input');e.type='text';e.value=val||'';e.placeholder=ph;
+  e.oninput=()=>{cb(e.value);generateCpp();};return e;
+}
+function mkToggle(val, cb, labelText) {
+  const row=el('div','toggle-row');
+  const lbl=el('span','toggle-label');lbl.textContent=labelText;
+  const tog=el('div','toggle'+(val?' on':''));
+  tog.onclick=()=>{const v=!tog.classList.contains('on');tog.classList.toggle('on',v);cb(v);generateCpp();renderTree();};
+  row.appendChild(lbl);row.appendChild(tog);return row;
+}
+function mkSelect(val, opts, cb) {
+  const s=el('select');
+  opts.forEach(o=>{const op=el('option');op.value=o;op.textContent=o;if(o===val)op.selected=true;s.appendChild(op);});
+  s.onchange=()=>{cb(s.value);generateCpp();renderForm();};return s;
+}
+function mkEnumList(arr, cb) {
+  const wrap=el('div','list-wrap');
+  const render=()=>{
+    wrap.innerHTML='';
+    arr.forEach((v,i)=>{
+      const row=el('div','list-item');
+      const inp=el('input');inp.type='text';inp.value=v;inp.oninput=()=>{arr[i]=inp.value;cb(arr);generateCpp();};
+      const rm=el('button','remove-btn');rm.textContent='×';rm.onclick=()=>{arr.splice(i,1);cb(arr);render();generateCpp();};
+      row.appendChild(inp);row.appendChild(rm);wrap.appendChild(row);
+    });
+    const add=el('button','add-btn');add.textContent='+ Add value';
+    add.onclick=()=>{arr.push('');cb(arr);render();generateCpp();};wrap.appendChild(add);
+  };render();return wrap;
+}
+function mkExamples(arr, cb) {
+  const wrap=el('div','list-wrap');
+  const render=()=>{
+    wrap.innerHTML='';
+    arr.forEach((v,i)=>{
+      const row=el('div','list-item');
+      const inp=el('input');inp.type='text';inp.value=v;inp.oninput=()=>{arr[i]=inp.value;cb(arr);generateCpp();};
+      const rm=el('button','remove-btn');rm.textContent='×';rm.onclick=()=>{arr.splice(i,1);cb(arr);render();generateCpp();};
+      row.appendChild(inp);row.appendChild(rm);wrap.appendChild(row);
+    });
+    const add=el('button','add-btn');add.textContent='+ Add example';
+    add.onclick=()=>{arr.push('');cb(arr);render();generateCpp();};wrap.appendChild(add);
+  };render();return wrap;
+}
+function mkIncludes(node) {
+  const wrap=el('div','list-wrap');
+  const render=()=>{
+    wrap.innerHTML='';
+    if(!node.include)node.include=[];
+    const pills=el('div');
+    node.include.forEach((g,i)=>{
+      const pill=el('div','include-pill');
+      const span=el('span');span.textContent=`include("${g}")`;
+      const rm=el('button');rm.textContent='×';rm.title='Remove';
+      rm.onclick=()=>{node.include.splice(i,1);render();generateCpp();renderTree();};
+      pill.appendChild(span);pill.appendChild(rm);pills.appendChild(pill);
+    });
+    wrap.appendChild(pills);
+    const available=Object.keys(schema.tag_groups||{}).filter(g=>!node.include.includes(g));
+    if(available.length){
+      const row=el('div','include-select-row');
+      const sel=el('select');
+      const def=el('option');def.value='';def.textContent='— add tag group include —';sel.appendChild(def);
+      available.forEach(g=>{const op=el('option');op.value=g;op.textContent=g;sel.appendChild(op);});
+      sel.style.flex='1';
+      sel.onchange=()=>{if(!sel.value)return;node.include.push(sel.value);render();generateCpp();renderTree();};
+      row.appendChild(sel);wrap.appendChild(row);
+    } else if(!Object.keys(schema.tag_groups||{}).length) {
+      const h=el('div');h.style.cssText='font-size:11px;color:var(--text3)';
+      h.textContent='No tag groups defined yet.';wrap.appendChild(h);
+    }
+  };render();return wrap;
+}
+function mkSection(title, color, bodyFn) {
+  const sec=el('div','form-section');
+  const hdr=el('div','form-section-header');
+  const dot=el('div','dot');dot.style.background=color;
+  hdr.appendChild(dot);hdr.appendChild(document.createTextNode(title));
+  sec.appendChild(hdr);
+  const b=el('div','form-body');bodyFn(b);sec.appendChild(b);return sec;
+}
+function mkTitle(typeLabel, cls, name) {
+  const t=el('div','form-title');
+  const b=el('span','tree-badge '+cls);b.style.cssText='font-size:12px;padding:3px 8px;';b.textContent=typeLabel;
+  t.appendChild(b);t.appendChild(document.createTextNode(name||'<unnamed>'));return t;
+}
+function mkRangeFields(obj) {
+  const rr=el('div','range-row');
+  const mi=el('input');mi.type='number';mi.placeholder='min';mi.value=(obj.range && obj.range[0] != null)? obj.range[0] : '';
+  mi.oninput=()=>{
+    if(!obj.range) obj.range=[null,null];
+    obj.range[0] = (mi.value==='') ? null : parseFloat(mi.value);
+    generateCpp();
+  };
+  const ma=el('input');ma.type='number';ma.placeholder='max';ma.value=(obj.range && obj.range[1] != null)? obj.range[1] : '';
+  ma.oninput=()=>{
+    if(!obj.range) obj.range=[null,null];
+    obj.range[1] = (ma.value==='') ? null : parseFloat(ma.value);
+    generateCpp();
+  };
+  rr.appendChild(mi);rr.appendChild(ma);return rr;
+}
+function actionBar(...btns) {
+  const sec=el('div','form-section');
+  const bar=el('div','action-bar');
+  btns.forEach(b=>bar.appendChild(b));
+  sec.appendChild(bar);return sec;
+}
+function mkBtn(text, cls, cb) {
+  const b=el('button','btn'+(cls?' '+cls:''));b.textContent=text;b.onclick=cb;return b;
+}
+function mkActionLabel(text) {
+  const s=el('span');s.style.cssText='font-size:11px;color:var(--text3);font-weight:700;letter-spacing:.06em;text-transform:uppercase;align-self:center;';
+  s.textContent=text;return s;
+}
+
+// ===================== FORMS =====================
+function formGroup(group, container) {
+  const [,gn]=sp(selectedPath[0]);
+  container.appendChild(mkTitle('group','badge-group',gn));
+  container.appendChild(mkSection('Group name','var(--group-color)',b=>{
+    b.appendChild(mkField('Name', mkText(gn, v=>{
+      if(!v||v===gn)return;
+      const tmp=schema.tag_groups[gn];
+      delete schema.tag_groups[gn];
+      schema.tag_groups[v]=tmp;
+      selectedPath[0]=`group:${v}`;
+      renderTree();
+    },'group-name'),true));
+  }));
+  container.appendChild(actionBar(
+    mkActionLabel('Add to group'),
+    mkBtn('+ Root tag','',()=>{
+      const id='tag_'+genId(); group[id]=newTag(id);
+      expandedPaths.add(selectedPath.join('/'));
+      renderTree(); selectNode([...selectedPath,`gtag:${id}`]);
+    }),
+    mkBtn('Delete group','danger',()=>{
+      delete schema.tag_groups[gn]; selectedPath=null;
+      renderTree();renderForm();generateCpp();
+    })
+  ));
+}
+
+function formTag(tag, container) {
+  const [type,key]=sp(selectedPath[selectedPath.length-1]);
+  container.appendChild(mkTitle('tag','badge-tag',tag.name));
+  container.appendChild(mkSection('Identity','var(--tag-color)',b=>{
+    const row=el('div','field-row');
+    row.appendChild(mkField('Name',mkText(tag.name,v=>{
+      const pc=resolveParentAndKey(selectedPath);
+      if(pc?.parent&&!Array.isArray(pc.parent)){
+        delete pc.parent[pc.key]; tag.name=v; pc.parent[v]=tag;
+        selectedPath[selectedPath.length-1]=`${type}:${v}`;
+      }
+      renderTree();
+    },'tag-name'),true));
+    row.appendChild(mkField('Completion detail',mkText(tag.completion_detail,v=>tag.completion_detail=v,'autocomplete hint')));
+    b.appendChild(row);
+    const ta=el('textarea');ta.value=tag.hover_info||'';ta.placeholder='Tooltip description...';
+    ta.oninput=()=>{tag.hover_info=ta.value;generateCpp();};
+    b.appendChild(mkField('Hover info',ta));
+  }));
+  container.appendChild(mkSection('Flags','#94a3b8',b=>{
+    b.appendChild(mkToggle(tag.required,v=>tag.required=v,'Required'));
+    b.appendChild(mkToggle(tag.allow_multiple,v=>tag.allow_multiple=v,'Allow multiple'));
+    b.appendChild(mkToggle(tag.allow_text,v=>{tag.allow_text=v;renderForm();},'Allow text content'));
+    if(tag.allow_text){
+      const row=el('div','field-row');
+      row.appendChild(mkField('Text type',mkSelect(tag.text_type||'STRING',VALUE_TYPES,v=>{tag.text_type=v;renderForm();})));
+      if(['INT','FLOAT','VEC3'].includes(tag.text_type))
+        row.appendChild(mkField('Range',mkRangeFields(tag)));
+      b.appendChild(row);
+      if(tag.text_type==='ENUM')
+        b.appendChild(mkField('Enum values',mkEnumList(tag.enum_values||(tag.enum_values=[]),v=>tag.enum_values=v)));
+    }
+  }));
+  container.appendChild(mkSection('Tag Group Includes','var(--group-color)',b=>b.appendChild(mkIncludes(tag))));
+  container.appendChild(mkSection('Examples','var(--yellow)',b=>b.appendChild(mkExamples(tag.examples||(tag.examples=[]),v=>tag.examples=v))));
+  container.appendChild(actionBar(
+    mkActionLabel('Add to tag'),
+    mkBtn('+ Attribute','',()=>{
+      if(!tag.attributes)tag.attributes={};
+      const id='attr_'+genId();tag.attributes[id]=newAttr(id);
+      expandedPaths.add(selectedPath.join('/'));renderTree();selectNode([...selectedPath,`attr:${id}`]);
+    }),
+    mkBtn('+ Child tag','',()=>{
+      if(!tag.children)tag.children={};
+      const id='tag_'+genId();tag.children[id]=newTag(id);
+      expandedPaths.add(selectedPath.join('/'));renderTree();selectNode([...selectedPath,`tag:${id}`]);
+    }),
+    mkBtn('+ Variant','',()=>{
+      if(!tag.variants)tag.variants=[];tag.variants.push(newVariant());
+      expandedPaths.add(selectedPath.join('/'));renderTree();selectNode([...selectedPath,`variant:${tag.variants.length-1}`]);
+    }),
+    mkBtn('Delete tag','danger',()=>{
+      const pc=resolveParentAndKey(selectedPath);
+      if(pc?.parent){if(Array.isArray(pc.parent))pc.parent.splice(pc.key,1);else delete pc.parent[pc.key];}
+      selectedPath=selectedPath.length>1?selectedPath.slice(0,-1):null;
+      renderTree();renderForm();generateCpp();
+    })
+  ));
+}
+
+function formAttr(attr, container) {
+  container.appendChild(mkTitle('attr','badge-attr',attr.name));
+  container.appendChild(mkSection('Identity','var(--attr-color)',b=>{
+    const row=el('div','field-row');
+    row.appendChild(mkField('Name',mkText(attr.name,v=>{
+      const pc=resolveParentAndKey(selectedPath);
+      if(pc?.parent&&!Array.isArray(pc.parent)){
+        delete pc.parent[pc.key];attr.name=v;pc.parent[v]=attr;
+        selectedPath[selectedPath.length-1]=`attr:${v}`;
+      }
+      renderTree();
+    },'attr-name'),true));
+    row.appendChild(mkField('Completion detail',mkText(attr.completion_detail,v=>attr.completion_detail=v)));
+    b.appendChild(row);
+    const ta=el('textarea');ta.value=attr.hover_info||'';ta.placeholder='Tooltip...';
+    ta.oninput=()=>{attr.hover_info=ta.value;generateCpp();};
+    b.appendChild(mkField('Hover info',ta));
+  }));
+  container.appendChild(mkSection('Type & Value','var(--cyan)',b=>{
+    const row=el('div','field-row');
+    row.appendChild(mkField('Value type',mkSelect(attr.type||'STRING',VALUE_TYPES,v=>{attr.type=v;renderForm();}),true));
+    row.appendChild(mkField('Default value',mkText(attr.default_value||'',v=>attr.default_value=v,'optional')));
+    b.appendChild(row);
+    if(attr.type==='ENUM')
+      b.appendChild(mkField('Enum values',mkEnumList(attr.enum_values||(attr.enum_values=[]),v=>attr.enum_values=v)));
+    if(['INT','FLOAT','VEC3'].includes(attr.type))
+      b.appendChild(mkField('Range',mkRangeFields(attr)));
+  }));
+  container.appendChild(mkSection('Flags','#94a3b8',b=>b.appendChild(mkToggle(attr.required,v=>attr.required=v,'Required'))));
+  container.appendChild(mkSection('Examples','var(--yellow)',b=>b.appendChild(mkExamples(attr.examples||(attr.examples=[]),v=>attr.examples=v))));
+  container.appendChild(actionBar(
+    mkBtn('Delete attribute','danger',()=>{
+      const pc=resolveParentAndKey(selectedPath);
+      if(pc?.parent)delete pc.parent[pc.key];
+      selectedPath=selectedPath.slice(0,-1);
+      renderTree();renderForm();generateCpp();
+    })
+  ));
+}
+
+function formVariant(variant, container) {
+  container.appendChild(mkTitle('if','badge-variant',variant.discriminator_value||'variant'));
+  container.appendChild(mkSection('Discriminator','var(--variant-color)',b=>{
+    const row=el('div','field-row');
+    row.appendChild(mkField('Attribute',mkText(variant.discriminator_attr,v=>{variant.discriminator_attr=v;renderTree();},'e.g. type')));
+    row.appendChild(mkField('Value',mkText(variant.discriminator_value,v=>{variant.discriminator_value=v;renderTree();},'e.g. object')));
+    b.appendChild(row);
+    const ta=el('textarea');ta.value=variant.hover_info||'';ta.placeholder='Variant description...';
+    ta.oninput=()=>{variant.hover_info=ta.value;generateCpp();};
+    b.appendChild(mkField('Hover info',ta));
+  }));
+  // Text content settings for conditional variant
+  container.appendChild(mkSection('Text content','#94a3b8',b=>{
+    b.appendChild(mkToggle(variant.allow_text,v=>{variant.allow_text=v;renderForm();},'Allow text content'));
+    if(variant.allow_text){
+      const row=el('div','field-row');
+      row.appendChild(mkField('Text type',mkSelect(variant.text_type||'STRING',VALUE_TYPES,v=>{variant.text_type=v;renderForm();})));
+      if(['INT','FLOAT','VEC3'].includes(variant.text_type))
+        row.appendChild(mkField('Range',mkRangeFields(variant)));
+      b.appendChild(row);
+      if(variant.text_type==='ENUM')
+        b.appendChild(mkField('Enum values',mkEnumList(variant.enum_values||(variant.enum_values=[]),v=>variant.enum_values=v)));
+    }
+  }));
+  container.appendChild(mkSection('Tag Group Includes','var(--group-color)',b=>b.appendChild(mkIncludes(variant))));
+  container.appendChild(actionBar(
+    mkActionLabel('Add to variant'),
+    mkBtn('+ Attribute','',()=>{
+      if(!variant.attributes)variant.attributes={};
+      const id='attr_'+genId();variant.attributes[id]=newAttr(id);
+      expandedPaths.add(selectedPath.join('/'));renderTree();selectNode([...selectedPath,`attr:${id}`]);
+    }),
+    mkBtn('+ Child tag','',()=>{
+      if(!variant.children)variant.children={};
+      const id='tag_'+genId();variant.children[id]=newTag(id);
+      expandedPaths.add(selectedPath.join('/'));renderTree();selectNode([...selectedPath,`tag:${id}`]);
+    }),
+    mkBtn('Delete variant','danger',()=>{
+      const pc=resolveParentAndKey(selectedPath);
+      if(pc?.parent)pc.parent.splice(pc.key,1);
+      selectedPath=selectedPath.slice(0,-1);
+      renderTree();renderForm();generateCpp();
+    })
+  ));
+}
+
+function addRootTag() { const id='tag_'+genId(); schema.tags[id]=newTag(id); renderTree(); selectNode([`tag:${id}`]); }
+function addTagGroup() { const id='group_'+genId(); schema.tag_groups[id]={}; renderTree(); selectNode([`group:${id}`]); }
+
+// ===================== CPP GEN =====================
+function esc(s){
+  return (s||'')
+    .replace(/\\/g,'\\\\')   // escape backslashes first
+    .replace(/\r/g,'\\r')       // carriage return -> \r
+    .replace(/\n/g,'\\n')       // newline -> \n
+    .replace(/\t/g,'\\t')       // tab -> \t
+    .replace(/"/g,'\\"');      // escape quotes
+}
+function q(s){return `"${esc(s)}"` ;}
+function bool(v){return v?'true':'false';}
+function vtype(v){return `ValueType::${v||'STRING'}`;}
+
+function buildCpp() {
+  // reset variant counter per-generation so names stay deterministic
+  variantCounter = 0;
+  const lines=[];
+  const groups=schema.tag_groups||{};
+  if(Object.keys(groups).length){
+    lines.push('void SceneSchema::build_tag_groups()');
+    lines.push('{');
+    for(const[gn,g] of Object.entries(groups)){
+      lines.push(`\tstd::map<std::string, TagSchema> ${gn}_group;`);
+      for(const[tn,t] of Object.entries(g)){
+        lines.push('');
+        cppTag(t,`${gn}_group[${q(tn)}]`,lines,'\t');
+      }
+      lines.push('');
+      lines.push(`\ttag_groups[${q(gn)}] = std::move(${gn}_group);`);
+      lines.push('');
+    }
+    lines.push('}');
+    lines.push('');
+  }
+  lines.push('void SceneSchema::build_schema()');
+  lines.push('{');
+  for(const[n,t] of Object.entries(schema.tags||{})){
+    cppTag(t,`root.children[${q(t.name||n)}]`,lines,'\t');
+    lines.push('');
+  }
+  lines.push('}');
+  return lines;
+}
+
+function cppTag(tag, varname, lines, ind) {
+  const props=[];
+  props.push([`${ind}\t.name = ${q(tag.name)}`]);
+  props.push([`${ind}\t.required = ${bool(tag.required)}`]);
+  props.push([`${ind}\t.allow_text = ${bool(tag.allow_text)}`]);
+  if(tag.allow_text&&tag.text_type) props.push([`${ind}\t.text_type = ${vtype(tag.text_type)}`]);
+  if(tag.range&&tag.range[0]!=null&&tag.range[1]!=null) props.push([`${ind}\t.range = std::make_pair(${tag.range[0]}, ${tag.range[1]})`]);
+  if(tag.enum_values?.length) props.push([`${ind}\t.enum_values = {${tag.enum_values.map(q).join(', ')}}`]);
+  props.push([`${ind}\t.hover_info = ${q(tag.hover_info)}`]);
+  props.push([`${ind}\t.completion_detail = ${q(tag.completion_detail)}`]);
+  if(tag.examples?.length) props.push([`${ind}\t.examples = {${tag.examples.map(q).join(', ')}}`]);
+  props.push([`${ind}\t.allow_multiple = ${bool(tag.allow_multiple)}`]);
+
+  lines.push(`${ind}${varname} = TagSchema{`);
+  props.forEach((p,i)=>lines.push(p[0]+(i<props.length-1?',':'')));
+  lines.push(`${ind}};`);
+
+  for(const[an,a] of Object.entries(tag.attributes||{})){lines.push('');cppAttr(a,`${varname}.attributes[${q(a.name||an)}]`,lines,ind);}
+  for(const[cn,c] of Object.entries(tag.children||{})){lines.push('');cppTag(c,`${varname}.children[${q(c.name||cn)}]`,lines,ind);}
+  (tag.include||[]).forEach(g=>{lines.push('');lines.push(`${ind}${varname}.include(tag_groups[${q(g)}]);`);});
+  (tag.variants||[]).forEach(v=>{
+    const myVar = 'v'+(variantCounter++);
+    lines.push('');lines.push(`${ind}{`);
+    const vi=ind+'\t';
+    lines.push(`${vi}ConditionalVariant ${myVar};`);
+    lines.push(`${vi}${myVar}.discriminator_attr = ${q(v.discriminator_attr)};`);
+    lines.push(`${vi}${myVar}.discriminator_value = ${q(v.discriminator_value)};`);
+    if(v.hover_info) lines.push(`${vi}${myVar}.hover_info = ${q(v.hover_info)};`);
+    // conditional variant text flags
+    lines.push(`${vi}${myVar}.allow_text = ${bool(v.allow_text)};`);
+    if(v.allow_text&&v.text_type) lines.push(`${vi}${myVar}.text_type = ${vtype(v.text_type)};`);
+    if(v.range&&v.range[0]!=null&&v.range[1]!=null) lines.push(`${vi}${myVar}.range = std::make_pair(${v.range[0]}, ${v.range[1]});`);
+    if(v.enum_values?.length) lines.push(`${vi}${myVar}.enum_values = {${v.enum_values.map(q).join(', ')}};`);
+    for(const[an,a] of Object.entries(v.attributes||{})){lines.push('');cppAttr(a,`${myVar}.attributes[${q(a.name||an)}]`,lines,vi);}    
+    for(const[cn,c] of Object.entries(v.children||{})){lines.push('');cppTag(c,`${myVar}.children[${q(c.name||cn)}]`,lines,vi);}    
+    (v.include||[]).forEach(g=>{lines.push('');lines.push(`${vi}${myVar}.include(tag_groups[${q(g)}]);`);});
+    lines.push('');lines.push(`${vi}${varname}.variants.push_back(std::move(${myVar}));`);
+    lines.push(`${ind}}`);
+  });
+}
+
+function cppAttr(attr, varname, lines, ind) {
+  const props=[];
+  props.push(`${ind}\t.name = ${q(attr.name)}`);
+  props.push(`${ind}\t.required = ${bool(attr.required)}`);
+  props.push(`${ind}\t.type = ${vtype(attr.type)}`);
+  if(attr.default_value) props.push(`${ind}\t.default_value = ${q(attr.default_value)}`);
+  if(attr.range&&attr.range[0]!=null&&attr.range[1]!=null) props.push(`${ind}\t.range = {{${attr.range[0]}f, ${attr.range[1]}f}}`);
+  if(attr.enum_values?.length) props.push(`${ind}\t.enum_values = {${attr.enum_values.map(q).join(', ')}}`);
+  props.push(`${ind}\t.hover_info = ${q(attr.hover_info)}`);
+  props.push(`${ind}\t.completion_detail = ${q(attr.completion_detail)}`);
+  if(attr.examples?.length) props.push(`${ind}\t.examples = {${attr.examples.map(q).join(', ')}}`);
+  lines.push(`${ind}${varname} = AttributeSchema{`);
+  props.forEach((p,i)=>lines.push(p+(i<props.length-1?',':'')));
+  lines.push(`${ind}};`);
+}
+
+function generateCpp() {
+  const lines=buildCpp();
+  const raw=lines.join('\n');
+  document.getElementById('cpp-output').innerHTML=highlight(raw);
+  document.getElementById('output-lines').textContent=lines.length+' lines';
+}
+
+function highlight(code) {
+  // Escape HTML FIRST, then colorize — never let regex produce HTML tags mid-string
+  let s=code.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  s=s.replace(/("(?:[^"\\]|\\.)*")/g,'<span class="cs">$1</span>');
+  s=s.replace(/\/\/.*/g,'<span class="cc">$&</span>');
+  s=s.replace(/\b(void|bool|true|false|auto|const|return|if|else|for|while)\b/g,'<span class="ck">$1</span>');
+  s=s.replace(/\b(std::map|std::move|std::make_pair|std::string)\b/g,'<span class="ck">$1</span>');
+  s=s.replace(/\b(TagSchema|AttributeSchema|ConditionalVariant|ValueType)\b/g,'<span class="ct">$1</span>');
+  s=s.replace(/(?<=[\s=,{(])(\d+\.?\d*f?)(?=[\s,;)}\n])/g,'<span class="cn">$1</span>');
+  return s;
+}
+
+// ===================== IMPORT/EXPORT =====================
+function exportJSON() {
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(schema,null,2)],{type:'application/json'}));
+  a.download='schema.json';a.click();
+}
+function importJSON(){document.getElementById('import-file').click();}
+function handleImport(e){
+  const f=e.target.files[0];if(!f)return;
+  const r=new FileReader();
+  r.onload=ev=>{
+    try{
+      schema=JSON.parse(ev.target.result);
+      if(!schema.tags)schema.tags={};
+      if(!schema.tag_groups)schema.tag_groups={};
+      selectedPath=null;expandedPaths=new Set();
+      renderTree();renderForm();generateCpp();
+    }catch(err){alert('Invalid JSON: '+err.message);}
+  };r.readAsText(f);
+}
+async function copyCode(){
+  const text=buildCpp().join('\n');
+  await navigator.clipboard.writeText(text);
+  const btn=document.getElementById('copy-btn');
+  btn.textContent='✓ Copied!';setTimeout(()=>btn.textContent='Copy C++',1600);
+}
+
+// Toggle output panel collapse/expand
+function updateOutputToggle() {
+  const btn = document.getElementById('output-toggle');
+  if (!btn) return;
+  const collapsed = document.body.classList.contains('output-collapsed');
+  btn.textContent = collapsed ? '▶' : '◀';
+}
+function toggleOutputPanel(){
+  const body = document.body;
+  body.classList.toggle('output-collapsed');
+  // also toggle collapsed class on panel for any additional styling
+  const out = document.getElementById('output-panel');
+  if(out) out.classList.toggle('collapsed', body.classList.contains('output-collapsed'));
+  updateOutputToggle();
+  // persist state
+  try{ localStorage.setItem('schemaEditor.outputCollapsed', body.classList.contains('output-collapsed')?'1':'0'); }catch(e){}
+}
+// restore saved state
+try{
+  const saved = localStorage.getItem('schemaEditor.outputCollapsed');
+  if(saved==='1') document.body.classList.add('output-collapsed');
+}catch(e){}
+window.addEventListener('load', updateOutputToggle);
+
+// ===================== INIT =====================
+renderTree();generateCpp();
+</script>
+</body>
+</html>

@@ -1,0 +1,258 @@
+<textures>
+	<texture name="wood_albedo" label="Wood Albedo" type="filepath">
+		<path>./textures/wood_albedo.png</path>
+	</texture>
+	<texture name="metal_normal" label="Metal Normal Map" type="filepath">
+		<path>./textures/metal_normal.png</path>
+	</texture>
+	<texture name="checker" label="Checker Local" type="checker_local">
+		<even>255,255,255</even>
+		<odd>0,0,0</odd>
+		<scale>5.0</scale>
+	</texture>
+	<texture name="checker_world" label="Checker Global" type="checker_global">
+		<even>204,51,25</even>
+		<odd>25,51,204</odd>
+		<scale>2.0</scale>
+	</texture>
+</textures>
+
+<materials>
+	<material name="mat_glass" label="Glass">
+		<albedo type="rgb">255,255,255</albedo>
+		<roughness type="value">0.0</roughness>
+		<metallic type="value">0.0</metallic>
+		<transmission type="value">1.0</transmission>
+		<ior>1.5</ior>
+		<emission_strength type="value">0</emission_strength>
+		<emission_color type="rgb">0,0,0</emission_color>
+	</material>
+
+	<material name="mat_metal" label="Brushed Metal">
+		<albedo type="rgb">204,204,230</albedo>
+		<roughness type="value">0.3</roughness>
+		<metallic type="value">1.0</metallic>
+		<transmission type="value">0.0</transmission>
+		<ior>2.4</ior>
+		<ambient_occlusion type="value">1.0</ambient_occlusion>
+		<normal_map>metal_normal</normal_map>
+		<normal_intensity>0.8</normal_intensity>
+		<texture_scale>2.0</texture_scale>
+	</material>
+
+	<material name="mat_wood" label="Wood">
+		<albedo type="texture">wood_albedo</albedo>
+		<roughness type="value">0.8</roughness>
+		<metallic type="value">0.0</metallic>
+		<ambient_occlusion type="texture">checker</ambient_occlusion>
+		<texture_scale>1.5</texture_scale>
+	</material>
+
+	<material name="mat_emissive" label="Emissive Panel">
+		<albedo type="rgb">255,204,102</albedo>
+		<roughness type="value">1.0</roughness>
+		<metallic type="value">0.0</metallic>
+		<emission_strength type="value">15</emission_strength>
+		<emission_color type="rgb">255,204,102</emission_color>
+	</material>
+
+	<material name="mat_floor" label="Floor">
+		<albedo type="texture">checker_world</albedo>
+		<roughness type="value">0.9</roughness>
+		<metallic type="value">0.0</metallic>
+		<ambient_occlusion type="value">1.0</ambient_occlusion>
+	</material>
+</materials>
+
+<assets>
+	<asset type="object" id="teapot">
+		<object type="external" path="./meshes/teapot.obj"/>
+		<material ref="mat_metal"/>
+		<transform>
+			<position>0 0 0</position>
+			<rotation type="euler">0 45 0</rotation>
+			<scale>1 1 1</scale>
+		</transform>
+	</asset>
+
+	<asset type="object" id="triangle_raw">
+		<object type="raw">
+			v 0 0 0
+			v 1 0 0
+			v 0 1 0
+			f 1 2 0
+		</object>
+		<material ref="mat_emissive"/>
+		<transform>
+			<position>5 0 0</position>
+		</transform>
+	</asset>
+
+	<asset type="primitive" id="glass_ball">
+		<primitive type="sphere">
+			<radius>1.0</radius>
+		</primitive>
+		<material ref="mat_glass"/>
+		<transform>
+			<position>-3 1 0</position>
+		</transform>
+	</asset>
+
+	<asset type="primitive" id="floor">
+		<primitive type="plane">
+			<normal>0 1 0</normal>
+		</primitive>
+		<material ref="mat_floor"/>
+		<transform>
+			<position>0 0 0</position>
+		</transform>
+	</asset>
+
+	<asset type="primitive" id="pillar">
+		<primitive type="cylinder">
+			<radius>0.3</radius>
+			<height>4.0</height>
+		</primitive>
+		<material ref="mat_wood"/>
+		<transform>
+			<position>4 0 -2</position>
+		</transform>
+	</asset>
+
+	<asset type="primitive" id="cone_obj">
+		<primitive type="cone">
+			<radius>0.5</radius>
+			<height>1.5</height>
+		</primitive>
+		<material ref="mat_metal"/>
+		<transform>
+			<position>-1 0 3</position>
+			<rotation type="quaternion">0 0 0 1</rotation>
+		</transform>
+	</asset>
+
+	<asset type="primitive" id="hyperboloid_obj">
+		<primitive type="hyperboloid">
+			<height>2.0</height>
+			<a>0.5</a>
+			<b>0.5</b>
+			<c>1.0</c>
+			<shape>1.0</shape>
+		</primitive>
+		<material ref="mat_glass"/>
+		<transform>
+			<position>2 0 2</position>
+		</transform>
+	</asset>
+
+	<asset type="instance" id="glass_ball_copy">
+		<parent ref="glass_ball"/>
+		<transform>
+			<position>3 1 1</position>
+			<scale>0.5 0.5 0.5</scale>
+		</transform>
+	</asset>
+
+	<asset type="instance" id="pillar_copy">
+		<parent ref="pillar"/>
+		<transform>
+			<position>-4 0 -2</position>
+			<rotation type="quaternion">0 0.383 0 0.924</rotation>
+		</transform>
+	</asset>
+</assets>
+
+<lights>
+	<light type="point">
+		<position>0 5 0</position>
+		<color>255,204,204</color>
+		<intensity>200</intensity>
+	</light>
+	<light type="point">
+		<position>-5 3 5</position>
+		<color>104,155,255</color>
+		<intensity>80</intensity>
+	</light>
+	<light type="directional">
+		<direction>-0.5 -1 -0.3</direction>
+		<color>#FFE3DF</color>
+		<intensity>3</intensity>
+	</light>
+</lights>
+
+<environment type="skybox">./hdri/studio.exr</environment>
+
+<cameras>
+	<camera name="cam_main" label="Main Camera" projection="perspective">
+		<placement type="lookat">
+			<position>0 3 -8</position>
+			<target>0 1 0</target>
+			<up>0 1 0</up>
+		</placement>
+		<fov mode="simple">60</fov>
+		<f_stop>2.8</f_stop>
+		<aperture_blades>6</aperture_blades>
+		<aperture_rotation>15</aperture_rotation>
+		<shutter_speed>0.016</shutter_speed>
+	</camera>
+
+	<camera name="cam_physical" label="Physical Camera" projection="perspective">
+		<placement type="lookat">
+			<position>5 2 -5</position>
+			<target>0 1 0</target>
+			<up>0 1 0</up>
+		</placement>
+		<fov mode="physical" sensor_fit="horizontal">
+			<focal_length>85</focal_length>
+			<sensor_width>36</sensor_width>
+			<sensor_height>24</sensor_height>
+		</fov>
+		<f_stop>1.4</f_stop>
+		<aperture_blades>9</aperture_blades>
+		<aperture_rotation>0</aperture_rotation>
+	</camera>
+
+	<camera name="cam_rotation" label="Rotation Camera" projection="perspective">
+		<placement type="rotation">
+			<position>0 8 0</position>
+			<rotation type="euler">90 0 0</rotation>
+		</placement>
+		<fov mode="simple">90</fov>
+	</camera>
+
+	<camera name="cam_ortho" label="Top Ortho" projection="orthographic">
+		<placement type="lookat">
+			<position>0 10 0</position>
+			<target>0 0 0</target>
+			<up>0 0 1</up>
+		</placement>
+		<ortho_scale>12.0</ortho_scale>
+	</camera>
+
+	<camera name="cam_fisheye" label="Fisheye" projection="fisheye">
+		<placement type="lookat">
+			<position>0 1 -3</position>
+			<target>0 1 0</target>
+			<up>0 1 0</up>
+		</placement>
+		<fisheye_fov>180</fisheye_fov>
+		<fisheye_mapping>equidistant</fisheye_mapping>
+	</camera>
+
+	<camera name="cam_360" label="360 Panoramic" projection="panoramic">
+		<placement type="rotation">
+			<position>0 1.7 0</position>
+			<rotation type="quaternion">0 0 0 1</rotation>
+		</placement>
+		<panoramic_type>equirectangular</panoramic_type>
+	</camera>
+</cameras>
+
+<render>
+	<camera ref="cam_main"/>
+	<width>1920</width>
+	<height>1080</height>
+	<samples>512</samples>
+	<max_bounces>8</max_bounces>
+	<output>./output/render.exr</output>
+</render>

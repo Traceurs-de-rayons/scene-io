@@ -1,0 +1,2343 @@
+{
+  "tag_groups": {
+    "transform": {
+      "transform": {
+        "_type": "tag",
+        "name": "transform",
+        "required": false,
+        "allow_text": false,
+        "hover_info": "Transformation applied to the element (position, rotation, scale).",
+        "completion_detail": "Transform",
+        "examples": [],
+        "allow_multiple": false,
+        "attributes": {},
+        "children": {
+          "position": {
+            "_type": "tag",
+            "name": "position",
+            "required": false,
+            "allow_text": true,
+            "text_type": "VEC3",
+            "hover_info": "3D position in world space. Format: \"x y z\"",
+            "completion_detail": "Position (vec3)",
+            "examples": [
+              "<position>0 0 0</position>",
+              "<position>3.5 1 -2</position>"
+            ],
+            "allow_multiple": false,
+            "attributes": {},
+            "children": {},
+            "variants": [],
+            "include": []
+          },
+          "rotation": {
+            "_type": "tag",
+            "name": "rotation",
+            "required": false,
+            "allow_text": true,
+            "text_type": "VEC3",
+            "hover_info": "Rotation. Format depends on type attribute.",
+            "completion_detail": "Rotation (vec3)",
+            "examples": [],
+            "allow_multiple": false,
+            "attributes": {
+              "type": {
+                "_type": "attribute",
+                "name": "type",
+                "required": false,
+                "type": "ENUM",
+                "default_value": "euler",
+                "enum_values": [
+                  "euler",
+                  "quaternion"
+                ],
+                "hover_info": "Rotation type: euler or quaternion.",
+                "completion_detail": "Rotation type",
+                "examples": []
+              }
+            },
+            "children": {},
+            "variants": [
+              {
+                "_type": "variant",
+                "discriminator_attr": "type",
+                "discriminator_value": "euler",
+                "hover_info": "Euler rotation (yaw, pitch, roll)",
+                "attributes": {},
+                "children": {},
+                "include": [],
+                "allow_text": true,
+                "text_type": "VEC3",
+                "range": [
+                  0,
+                  360
+                ],
+                "enum_values": []
+              },
+              {
+                "_type": "variant",
+                "discriminator_attr": "type",
+                "discriminator_value": "quaternion",
+                "hover_info": "Surface rotation, expressed as a unit quaternion (x y z w).\n\nThe quaternion must be normalized : x² + y² + z² + w² = 1.\nUnnormalized values will be rejected by the parser.",
+                "attributes": {},
+                "children": {},
+                "include": [],
+                "allow_text": true,
+                "text_type": null,
+                "range": null,
+                "enum_values": []
+              }
+            ],
+            "include": []
+          },
+          "scale": {
+            "_type": "tag",
+            "name": "scale",
+            "required": false,
+            "allow_text": true,
+            "text_type": "VEC3",
+            "hover_info": "Scale factor. Format: \"x y z\"",
+            "completion_detail": "Scale (vec3)",
+            "examples": [
+              "<scale>1 1 1</scale>",
+              "<scale>0.5 0.5 0.5</scale>"
+            ],
+            "allow_multiple": false,
+            "attributes": {},
+            "children": {},
+            "variants": [],
+            "include": []
+          }
+        },
+        "variants": [],
+        "include": []
+      }
+    }
+  },
+  "tags": {
+    "link": {
+      "_type": "tag",
+      "name": "link",
+      "required": false,
+      "allow_text": false,
+      "hover_info": "Link another scene file. It allow you to split scene content across multiple files.",
+      "completion_detail": "Link another scene file",
+      "examples": [],
+      "allow_multiple": false,
+      "attributes": {
+        "path": {
+          "_type": "attribute",
+          "name": "path",
+          "required": true,
+          "type": "FILEPATH",
+          "default_value": "",
+          "enum_values": [],
+          "hover_info": "The path of the linked file.",
+          "completion_detail": "File path",
+          "examples": [
+            "path=\"./material.tdr\""
+          ]
+        }
+      },
+      "children": {},
+      "variants": [],
+      "include": []
+    },
+    "materials": {
+      "_type": "tag",
+      "name": "materials",
+      "required": false,
+      "allow_text": false,
+      "hover_info": "List of materials in the scene. Contains <material> tags.",
+      "completion_detail": "Materials container",
+      "examples": [],
+      "allow_multiple": false,
+      "attributes": {},
+      "children": {
+        "material": {
+          "_type": "tag",
+          "name": "material",
+          "required": false,
+          "allow_text": false,
+          "hover_info": "Material definition with all its properties.",
+          "completion_detail": "Material definition",
+          "examples": [],
+          "allow_multiple": true,
+          "attributes": {
+            "name": {
+              "_type": "attribute",
+              "name": "name",
+              "required": true,
+              "type": "STRING",
+              "default_value": "",
+              "enum_values": [],
+              "hover_info": "Unique identifier for this material. Used to reference it in objects.",
+              "completion_detail": "Material name",
+              "examples": [
+                "name=\"metal\"",
+                "name=\"wood\""
+              ]
+            },
+            "label": {
+              "_type": "attribute",
+              "name": "label",
+              "required": false,
+              "type": "STRING",
+              "default_value": "",
+              "range": null,
+              "enum_values": [],
+              "hover_info": "Display name of the material",
+              "completion_detail": "Display name",
+              "examples": []
+            }
+          },
+          "children": {
+            "albedo": {
+              "_type": "tag",
+              "name": "albedo",
+              "required": false,
+              "allow_text": false,
+              "text_type": "COLOR",
+              "hover_info": "Base surface color that defines the proportion of incoming light reflected diffusely. It does not include lighting, shadows, reflections, or emission — only the intrinsic reflectance of the material.",
+              "completion_detail": "Material color",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {
+                "type": {
+                  "_type": "attribute",
+                  "name": "type",
+                  "required": false,
+                  "type": "ENUM",
+                  "default_value": "rgb",
+                  "range": null,
+                  "enum_values": [
+                    "rgb",
+                    "texture"
+                  ],
+                  "hover_info": "",
+                  "completion_detail": "Albedo type",
+                  "examples": []
+                }
+              },
+              "children": {},
+              "variants": [
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "rgb",
+                  "hover_info": "",
+                  "attributes": {},
+                  "children": {},
+                  "include": [],
+                  "allow_text": true,
+                  "text_type": "COLOR",
+                  "range": null,
+                  "enum_values": []
+                },
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "texture",
+                  "hover_info": "",
+                  "attributes": {},
+                  "children": {},
+                  "include": [],
+                  "allow_text": true,
+                  "text_type": null,
+                  "range": null,
+                  "enum_values": []
+                }
+              ],
+              "include": []
+            },
+            "metallic": {
+              "_type": "tag",
+              "name": "metallic",
+              "required": false,
+              "allow_text": false,
+              "text_type": "COLOR",
+              "hover_info": "Whether the surface behaves as a conductor (1.0) or a dielectric (0.0). Metals have no diffuse component and their reflectance is tinted by the albedo. Intermediate values are physically incorrect but accepted as an artistic control.",
+              "completion_detail": "Material metallic",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {
+                "type": {
+                  "_type": "attribute",
+                  "name": "type",
+                  "required": false,
+                  "type": "ENUM",
+                  "default_value": "value",
+                  "range": null,
+                  "enum_values": [
+                    "value",
+                    "texture"
+                  ],
+                  "hover_info": "",
+                  "completion_detail": "Metallic type",
+                  "examples": []
+                }
+              },
+              "children": {},
+              "variants": [
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "value",
+                  "hover_info": "",
+                  "attributes": {},
+                  "children": {},
+                  "include": [],
+                  "allow_text": true,
+                  "text_type": "FLOAT",
+                  "range": [
+                    0,
+                    1
+                  ],
+                  "enum_values": []
+                },
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "texture",
+                  "hover_info": "",
+                  "attributes": {},
+                  "children": {},
+                  "include": [],
+                  "allow_text": true,
+                  "text_type": null,
+                  "range": null,
+                  "enum_values": []
+                }
+              ],
+              "include": []
+            },
+            "roughness": {
+              "_type": "tag",
+              "name": "roughness",
+              "required": false,
+              "allow_text": false,
+              "text_type": "COLOR",
+              "hover_info": "Microscale irregularity of the surface. 0.0 is a perfect mirror, 1.0 is fully diffuse. Drives the width of the specular lobe via the GGX distribution.",
+              "completion_detail": "Material roughness",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {
+                "type": {
+                  "_type": "attribute",
+                  "name": "type",
+                  "required": false,
+                  "type": "ENUM",
+                  "default_value": "value",
+                  "range": null,
+                  "enum_values": [
+                    "value",
+                    "texture"
+                  ],
+                  "hover_info": "",
+                  "completion_detail": "Roughness type",
+                  "examples": []
+                }
+              },
+              "children": {},
+              "variants": [
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "value",
+                  "hover_info": "",
+                  "attributes": {},
+                  "children": {},
+                  "include": [],
+                  "allow_text": true,
+                  "text_type": "FLOAT",
+                  "range": [
+                    0,
+                    1
+                  ],
+                  "enum_values": []
+                },
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "texture",
+                  "hover_info": "",
+                  "attributes": {},
+                  "children": {},
+                  "include": [],
+                  "allow_text": true,
+                  "text_type": null,
+                  "range": null,
+                  "enum_values": []
+                }
+              ],
+              "include": []
+            },
+            "transmission": {
+              "_type": "tag",
+              "name": "transmission",
+              "required": false,
+              "allow_text": false,
+              "text_type": "COLOR",
+              "hover_info": "Fraction of light that passes through the surface rather than being reflected. 1.0 is fully transparent. Requires a valid IOR to refract correctly.",
+              "completion_detail": "Material transmission",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {
+                "type": {
+                  "_type": "attribute",
+                  "name": "type",
+                  "required": false,
+                  "type": "ENUM",
+                  "default_value": "value",
+                  "range": null,
+                  "enum_values": [
+                    "value",
+                    "texture"
+                  ],
+                  "hover_info": "",
+                  "completion_detail": "Transmission type",
+                  "examples": []
+                }
+              },
+              "children": {},
+              "variants": [
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "value",
+                  "hover_info": "",
+                  "attributes": {},
+                  "children": {},
+                  "include": [],
+                  "allow_text": true,
+                  "text_type": "FLOAT",
+                  "range": [
+                    0,
+                    1
+                  ],
+                  "enum_values": []
+                },
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "texture",
+                  "hover_info": "",
+                  "attributes": {},
+                  "children": {},
+                  "include": [],
+                  "allow_text": true,
+                  "text_type": null,
+                  "range": null,
+                  "enum_values": []
+                }
+              ],
+              "include": []
+            },
+            "ambient_occlusion": {
+              "_type": "tag",
+              "name": "ambient_occlusion",
+              "required": false,
+              "allow_text": false,
+              "text_type": "COLOR",
+              "hover_info": "Multiplier that darkens crevices by approximating how much ambient light reaches a point. Not physically based — It allows you to add texture to a surface that doesn't really have any. Useful as a baked artistic control.",
+              "completion_detail": "Material metallic",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {
+                "type": {
+                  "_type": "attribute",
+                  "name": "type",
+                  "required": false,
+                  "type": "ENUM",
+                  "default_value": "value",
+                  "range": null,
+                  "enum_values": [
+                    "value",
+                    "texture"
+                  ],
+                  "hover_info": "",
+                  "completion_detail": "Ambiant occlusion type",
+                  "examples": []
+                }
+              },
+              "children": {},
+              "variants": [
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "value",
+                  "hover_info": "",
+                  "attributes": {},
+                  "children": {},
+                  "include": [],
+                  "allow_text": true,
+                  "text_type": "FLOAT",
+                  "range": [
+                    0,
+                    1
+                  ],
+                  "enum_values": []
+                },
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "texture",
+                  "hover_info": "",
+                  "attributes": {},
+                  "children": {},
+                  "include": [],
+                  "allow_text": true,
+                  "text_type": null,
+                  "range": null,
+                  "enum_values": []
+                }
+              ],
+              "include": []
+            },
+            "emission_strength": {
+              "_type": "tag",
+              "name": "emission_strength",
+              "required": false,
+              "allow_text": false,
+              "text_type": "COLOR",
+              "hover_info": "Power of the light emitted by the surface. A value above 0 turns the surface into an area light that contributes to global illumination.",
+              "completion_detail": "Material emission strength",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {
+                "type": {
+                  "_type": "attribute",
+                  "name": "type",
+                  "required": false,
+                  "type": "ENUM",
+                  "default_value": "value",
+                  "range": null,
+                  "enum_values": [
+                    "value",
+                    "texture"
+                  ],
+                  "hover_info": "",
+                  "completion_detail": "Emission strength type",
+                  "examples": []
+                }
+              },
+              "children": {},
+              "variants": [
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "value",
+                  "hover_info": "",
+                  "attributes": {},
+                  "children": {},
+                  "include": [],
+                  "allow_text": true,
+                  "text_type": "FLOAT",
+                  "range": [
+                    null,
+                    null
+                  ],
+                  "enum_values": []
+                },
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "texture",
+                  "hover_info": "",
+                  "attributes": {},
+                  "children": {},
+                  "include": [],
+                  "allow_text": true,
+                  "text_type": null,
+                  "range": null,
+                  "enum_values": []
+                }
+              ],
+              "include": []
+            },
+            "emission_color": {
+              "_type": "tag",
+              "name": "emission_color",
+              "required": false,
+              "allow_text": false,
+              "text_type": "COLOR",
+              "hover_info": "Color of the emitted light. Multiplied by emission_strength to give the final radiance.",
+              "completion_detail": "Material emission color",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {
+                "type": {
+                  "_type": "attribute",
+                  "name": "type",
+                  "required": false,
+                  "type": "ENUM",
+                  "default_value": "rgb",
+                  "range": null,
+                  "enum_values": [
+                    "rgb",
+                    "texture"
+                  ],
+                  "hover_info": "",
+                  "completion_detail": "Emission color type",
+                  "examples": []
+                }
+              },
+              "children": {},
+              "variants": [
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "rgb",
+                  "hover_info": "",
+                  "attributes": {},
+                  "children": {},
+                  "include": [],
+                  "allow_text": true,
+                  "text_type": "COLOR",
+                  "range": null,
+                  "enum_values": []
+                },
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "texture",
+                  "hover_info": "",
+                  "attributes": {},
+                  "children": {},
+                  "include": [],
+                  "allow_text": true,
+                  "text_type": null,
+                  "range": null,
+                  "enum_values": []
+                }
+              ],
+              "include": []
+            },
+            "ior": {
+              "_type": "tag",
+              "name": "ior",
+              "required": false,
+              "allow_text": true,
+              "text_type": "FLOAT",
+              "range": null,
+              "hover_info": "Index of Refraction. Controls how much light bends when entering the surface and the fresnel reflectance at grazing angles. 1.0 is vacuum, common values are 1.33 (water), 1.5 (glass), 2.4 (diamond). Only meaningful for dielectrics.",
+              "completion_detail": "Material IOR",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {},
+              "children": {},
+              "variants": [],
+              "include": []
+            },
+            "texture_scale": {
+              "_type": "tag",
+              "name": "texture_scale",
+              "required": false,
+              "allow_text": true,
+              "text_type": "FLOAT",
+              "range": null,
+              "hover_info": "Uniform scale applied to UV coordinates before sampling any texture. Values above 1.0 tile the texture, below 1.0 zoom in.",
+              "completion_detail": "Scale of the material textures",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {},
+              "children": {},
+              "variants": [],
+              "include": []
+            },
+            "normal_map": {
+              "_type": "tag",
+              "name": "normal_map",
+              "required": false,
+              "allow_text": true,
+              "text_type": null,
+              "range": null,
+              "hover_info": "Tangent-space normal map. RGB values are interpreted as XYZ perturbations of the surface normal, remapped from [0,1] to [-1,1].",
+              "completion_detail": "Texture normal perbations",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {},
+              "children": {},
+              "variants": [],
+              "include": []
+            },
+            "normal_intensity": {
+              "_type": "tag",
+              "name": "normal_intensity",
+              "required": false,
+              "allow_text": true,
+              "text_type": "FLOAT",
+              "range": null,
+              "hover_info": "Blending factor between the geometry normal (0.0) and the fully perturbed normal from the normal map (1.0). Behavior with values outside the range [0-1] is undefined.",
+              "completion_detail": "",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {},
+              "children": {},
+              "variants": [],
+              "include": []
+            }
+          },
+          "variants": [],
+          "include": []
+        }
+      },
+      "variants": [],
+      "include": []
+    },
+    "assets": {
+      "_type": "tag",
+      "name": "assets",
+      "required": false,
+      "allow_text": false,
+      "hover_info": "List of assets in the scene.",
+      "completion_detail": "Assets container",
+      "examples": [],
+      "allow_multiple": false,
+      "attributes": {},
+      "children": {
+        "asset": {
+          "_type": "tag",
+          "name": "asset",
+          "required": false,
+          "allow_text": false,
+          "hover_info": "Asset definition. Type determines available children.",
+          "completion_detail": "Asset definition",
+          "examples": [],
+          "allow_multiple": true,
+          "attributes": {
+            "type": {
+              "_type": "attribute",
+              "name": "type",
+              "required": true,
+              "type": "ENUM",
+              "enum_values": [
+                "object",
+                "primitive",
+                "instance"
+              ],
+              "hover_info": "Type of asset: object (mesh from file), primitive (built-in shape), or instance (reference to another asset).",
+              "completion_detail": "Asset type (required)",
+              "examples": []
+            },
+            "id": {
+              "_type": "attribute",
+              "name": "id",
+              "required": true,
+              "type": "STRING",
+              "default_value": "",
+              "enum_values": [],
+              "hover_info": "Unique identifier for this asset.",
+              "completion_detail": "Asset ID (required)",
+              "examples": [
+                "id=\"my_object\""
+              ]
+            }
+          },
+          "children": {
+            "material": {
+              "_type": "tag",
+              "name": "material",
+              "required": false,
+              "allow_text": false,
+              "text_type": null,
+              "range": null,
+              "hover_info": "Reference to the material of the asset",
+              "completion_detail": "Asset material",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {
+                "ref": {
+                  "_type": "attribute",
+                  "name": "ref",
+                  "required": true,
+                  "type": "STRING",
+                  "default_value": "",
+                  "range": null,
+                  "enum_values": [],
+                  "hover_info": "Name of the material",
+                  "completion_detail": "Name of the material",
+                  "examples": []
+                }
+              },
+              "children": {},
+              "variants": [],
+              "include": []
+            }
+          },
+          "variants": [
+            {
+              "_type": "variant",
+              "discriminator_attr": "type",
+              "discriminator_value": "object",
+              "hover_info": "Object asset: loads a mesh from a file.",
+              "attributes": {},
+              "children": {
+                "object": {
+                  "_type": "tag",
+                  "name": "object",
+                  "required": true,
+                  "allow_text": false,
+                  "hover_info": "Object mesh source.",
+                  "completion_detail": "Object source",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {
+                    "type": {
+                      "_type": "attribute",
+                      "name": "type",
+                      "required": false,
+                      "type": "ENUM",
+                      "default_value": "external",
+                      "range": null,
+                      "enum_values": [
+                        "external",
+                        "raw"
+                      ],
+                      "hover_info": "Type of the imported object",
+                      "completion_detail": "Type of the imported object",
+                      "examples": []
+                    }
+                  },
+                  "children": {},
+                  "variants": [
+                    {
+                      "_type": "variant",
+                      "discriminator_attr": "type",
+                      "discriminator_value": "raw",
+                      "hover_info": "Raw .obj formated mesh.",
+                      "attributes": {},
+                      "children": {},
+                      "include": [],
+                      "allow_text": true,
+                      "text_type": null,
+                      "range": null,
+                      "enum_values": []
+                    },
+                    {
+                      "_type": "variant",
+                      "discriminator_attr": "type",
+                      "discriminator_value": "external",
+                      "hover_info": "External file object mesh source.",
+                      "attributes": {
+                        "path": {
+                          "_type": "attribute",
+                          "name": "path",
+                          "required": true,
+                          "type": "FILEPATH",
+                          "default_value": "",
+                          "range": null,
+                          "enum_values": [],
+                          "hover_info": "Filepath of the object.",
+                          "completion_detail": "Filepath of the object",
+                          "examples": []
+                        }
+                      },
+                      "children": {},
+                      "include": [],
+                      "allow_text": false,
+                      "text_type": null,
+                      "range": null,
+                      "enum_values": []
+                    }
+                  ],
+                  "include": []
+                }
+              },
+              "include": []
+            },
+            {
+              "_type": "variant",
+              "discriminator_attr": "type",
+              "discriminator_value": "primitive",
+              "hover_info": "Primitive asset: a built-in shape.",
+              "attributes": {},
+              "children": {
+                "primitive": {
+                  "_type": "tag",
+                  "name": "primitive",
+                  "required": true,
+                  "allow_text": false,
+                  "hover_info": "Primitive shape type.",
+                  "completion_detail": "Primitive type",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {
+                    "type": {
+                      "_type": "attribute",
+                      "name": "type",
+                      "required": true,
+                      "type": "ENUM",
+                      "enum_values": [
+                        "plane",
+                        "sphere",
+                        "cylinder",
+                        "cone",
+                        "hyperboloid"
+                      ],
+                      "hover_info": "Shape type.",
+                      "completion_detail": "Shape type (required)",
+                      "examples": []
+                    }
+                  },
+                  "children": {},
+                  "variants": [
+                    {
+                      "_type": "variant",
+                      "discriminator_attr": "type",
+                      "discriminator_value": "plane",
+                      "hover_info": "Plane primitive.",
+                      "attributes": {},
+                      "children": {
+                        "normal": {
+                          "_type": "tag",
+                          "name": "normal",
+                          "required": true,
+                          "allow_text": true,
+                          "text_type": "VEC3",
+                          "range": [
+                            -1,
+                            1
+                          ],
+                          "hover_info": "Define the orientation of the plane",
+                          "completion_detail": "Plane normal",
+                          "examples": [],
+                          "allow_multiple": false,
+                          "attributes": {},
+                          "children": {},
+                          "variants": [],
+                          "include": []
+                        }
+                      },
+                      "include": [],
+                      "allow_text": false,
+                      "text_type": null,
+                      "range": null,
+                      "enum_values": []
+                    },
+                    {
+                      "_type": "variant",
+                      "discriminator_attr": "type",
+                      "discriminator_value": "sphere",
+                      "hover_info": "Sphere primitive.",
+                      "attributes": {},
+                      "children": {
+                        "radius": {
+                          "_type": "tag",
+                          "name": "radius",
+                          "required": true,
+                          "allow_text": true,
+                          "text_type": "FLOAT",
+                          "range": null,
+                          "hover_info": "Radius of the sphere",
+                          "completion_detail": "Sphere radius",
+                          "examples": [],
+                          "allow_multiple": false,
+                          "attributes": {},
+                          "children": {},
+                          "variants": [],
+                          "include": []
+                        }
+                      },
+                      "include": [],
+                      "allow_text": false,
+                      "text_type": null,
+                      "range": null,
+                      "enum_values": []
+                    },
+                    {
+                      "_type": "variant",
+                      "discriminator_attr": "type",
+                      "discriminator_value": "cylinder",
+                      "hover_info": "Cylinder primitive.",
+                      "attributes": {},
+                      "children": {
+                        "radius": {
+                          "_type": "tag",
+                          "name": "radius",
+                          "required": true,
+                          "allow_text": true,
+                          "text_type": "FLOAT",
+                          "range": null,
+                          "hover_info": "Radius of the cylinder",
+                          "completion_detail": "Cylinder radius",
+                          "examples": [],
+                          "allow_multiple": false,
+                          "attributes": {},
+                          "children": {},
+                          "variants": [],
+                          "include": []
+                        },
+                        "height": {
+                          "_type": "tag",
+                          "name": "height",
+                          "required": true,
+                          "allow_text": true,
+                          "text_type": "FLOAT",
+                          "range": null,
+                          "hover_info": "Height of the cylinder",
+                          "completion_detail": "Cylinder height",
+                          "examples": [],
+                          "allow_multiple": false,
+                          "attributes": {},
+                          "children": {},
+                          "variants": [],
+                          "include": []
+                        }
+                      },
+                      "include": [],
+                      "allow_text": false,
+                      "text_type": null,
+                      "range": null,
+                      "enum_values": []
+                    },
+                    {
+                      "_type": "variant",
+                      "discriminator_attr": "type",
+                      "discriminator_value": "cone",
+                      "hover_info": "Cone primitive.",
+                      "attributes": {},
+                      "children": {
+                        "radius": {
+                          "_type": "tag",
+                          "name": "radius",
+                          "required": true,
+                          "allow_text": true,
+                          "text_type": "FLOAT",
+                          "range": null,
+                          "hover_info": "Radius of the cone",
+                          "completion_detail": "Cone radius",
+                          "examples": [],
+                          "allow_multiple": false,
+                          "attributes": {},
+                          "children": {},
+                          "variants": [],
+                          "include": []
+                        },
+                        "height": {
+                          "_type": "tag",
+                          "name": "height",
+                          "required": true,
+                          "allow_text": true,
+                          "text_type": "FLOAT",
+                          "range": null,
+                          "hover_info": "Height of the cone",
+                          "completion_detail": "Cone height",
+                          "examples": [],
+                          "allow_multiple": false,
+                          "attributes": {},
+                          "children": {},
+                          "variants": [],
+                          "include": []
+                        }
+                      },
+                      "include": [],
+                      "allow_text": false,
+                      "text_type": null,
+                      "range": null,
+                      "enum_values": []
+                    },
+                    {
+                      "_type": "variant",
+                      "discriminator_attr": "type",
+                      "discriminator_value": "hyperboloid",
+                      "hover_info": "Hyperboloid primitive.",
+                      "attributes": {},
+                      "children": {
+                        "height": {
+                          "_type": "tag",
+                          "name": "height",
+                          "required": true,
+                          "allow_text": true,
+                          "text_type": "FLOAT",
+                          "range": null,
+                          "hover_info": "Height of the hyperboloid",
+                          "completion_detail": "Hyperboloid height",
+                          "examples": [],
+                          "allow_multiple": false,
+                          "attributes": {},
+                          "children": {},
+                          "variants": [],
+                          "include": []
+                        },
+                        "a": {
+                          "_type": "tag",
+                          "name": "a",
+                          "required": true,
+                          "allow_text": true,
+                          "text_type": "FLOAT",
+                          "range": null,
+                          "hover_info": "",
+                          "completion_detail": "",
+                          "examples": [],
+                          "allow_multiple": false,
+                          "attributes": {},
+                          "children": {},
+                          "variants": [],
+                          "include": []
+                        },
+                        "b": {
+                          "_type": "tag",
+                          "name": "b",
+                          "required": true,
+                          "allow_text": true,
+                          "text_type": "FLOAT",
+                          "range": null,
+                          "hover_info": "",
+                          "completion_detail": "",
+                          "examples": [],
+                          "allow_multiple": false,
+                          "attributes": {},
+                          "children": {},
+                          "variants": [],
+                          "include": []
+                        },
+                        "c": {
+                          "_type": "tag",
+                          "name": "c",
+                          "required": true,
+                          "allow_text": true,
+                          "text_type": "FLOAT",
+                          "range": null,
+                          "hover_info": "",
+                          "completion_detail": "",
+                          "examples": [],
+                          "allow_multiple": false,
+                          "attributes": {},
+                          "children": {},
+                          "variants": [],
+                          "include": []
+                        },
+                        "shape": {
+                          "_type": "tag",
+                          "name": "shape",
+                          "required": true,
+                          "allow_text": true,
+                          "text_type": "FLOAT",
+                          "range": null,
+                          "hover_info": "Shape of the hyperboloid",
+                          "completion_detail": "Hyperboloid shape",
+                          "examples": [],
+                          "allow_multiple": false,
+                          "attributes": {},
+                          "children": {},
+                          "variants": [],
+                          "include": []
+                        }
+                      },
+                      "include": [],
+                      "allow_text": false,
+                      "text_type": null,
+                      "range": null,
+                      "enum_values": []
+                    }
+                  ],
+                  "include": []
+                }
+              },
+              "include": []
+            },
+            {
+              "_type": "variant",
+              "discriminator_attr": "type",
+              "discriminator_value": "instance",
+              "hover_info": "Instance asset: reference to another asset with a different transform.",
+              "attributes": {},
+              "children": {
+                "parent": {
+                  "_type": "tag",
+                  "name": "parent",
+                  "required": true,
+                  "allow_text": false,
+                  "text_type": null,
+                  "range": null,
+                  "hover_info": "Name of the parent asset",
+                  "completion_detail": "Parent asset name",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {
+                    "ref": {
+                      "_type": "attribute",
+                      "name": "ref",
+                      "required": true,
+                      "type": "STRING",
+                      "default_value": "",
+                      "range": null,
+                      "enum_values": [],
+                      "hover_info": "Name of the parent asset",
+                      "completion_detail": "Parent asset name",
+                      "examples": []
+                    }
+                  },
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                }
+              },
+              "include": []
+            }
+          ],
+          "include": [
+            "transform"
+          ]
+        }
+      },
+      "variants": [],
+      "include": []
+    },
+    "cameras": {
+      "_type": "tag",
+      "name": "cameras",
+      "required": false,
+      "allow_text": false,
+      "hover_info": "Contain a list of cameras.",
+      "completion_detail": "Cameras",
+      "examples": [],
+      "allow_multiple": false,
+      "attributes": {},
+      "children": {
+        "camera": {
+          "_type": "tag",
+          "name": "camera",
+          "required": false,
+          "allow_text": false,
+          "text_type": null,
+          "range": null,
+          "hover_info": "A camera and its properties.",
+          "completion_detail": "Camera",
+          "examples": [],
+          "allow_multiple": true,
+          "attributes": {
+            "projection": {
+              "_type": "attribute",
+              "name": "projection",
+              "required": false,
+              "type": "ENUM",
+              "default_value": "perspective",
+              "range": null,
+              "enum_values": [
+                "perspective",
+                "orthographic",
+                "panoramic",
+                "fisheye"
+              ],
+              "hover_info": "Projection of the camera",
+              "completion_detail": "Projection of the camera",
+              "examples": []
+            },
+            "name": {
+              "_type": "attribute",
+              "name": "name",
+              "required": true,
+              "type": "STRING",
+              "default_value": "",
+              "range": null,
+              "enum_values": [],
+              "hover_info": "Camera unique identifier, used to set the render camera",
+              "completion_detail": "Camera unique identifier",
+              "examples": []
+            },
+            "label": {
+              "_type": "attribute",
+              "name": "label",
+              "required": false,
+              "type": "STRING",
+              "default_value": "",
+              "range": null,
+              "enum_values": [],
+              "hover_info": "Display name of the camera",
+              "completion_detail": "Display name",
+              "examples": []
+            }
+          },
+          "children": {
+            "placement": {
+              "_type": "tag",
+              "name": "placement",
+              "required": true,
+              "allow_text": false,
+              "text_type": null,
+              "range": null,
+              "hover_info": "Camera placement settings",
+              "completion_detail": "Camera placement settings",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {
+                "type": {
+                  "_type": "attribute",
+                  "name": "type",
+                  "required": false,
+                  "type": "ENUM",
+                  "default_value": "lookat",
+                  "range": null,
+                  "enum_values": [
+                    "lookat",
+                    "rotation"
+                  ],
+                  "hover_info": "Type of space position",
+                  "completion_detail": "Type of space position",
+                  "examples": []
+                }
+              },
+              "children": {
+                "position": {
+                  "_type": "tag",
+                  "name": "position",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "VEC3",
+                  "range": null,
+                  "hover_info": "Camera position in the world",
+                  "completion_detail": "Camera position",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                }
+              },
+              "variants": [
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "lookat",
+                  "hover_info": "Easy camera placement defined with a lookat",
+                  "attributes": {},
+                  "children": {
+                    "target": {
+                      "_type": "tag",
+                      "name": "target",
+                      "required": true,
+                      "allow_text": true,
+                      "text_type": "VEC3",
+                      "range": null,
+                      "hover_info": "Camera target/look at. Represent a point of the world where the camera is looking.",
+                      "completion_detail": "Camera target",
+                      "examples": [],
+                      "allow_multiple": false,
+                      "attributes": {},
+                      "children": {},
+                      "variants": [],
+                      "include": []
+                    },
+                    "up": {
+                      "_type": "tag",
+                      "name": "up",
+                      "required": false,
+                      "allow_text": true,
+                      "text_type": "VEC3",
+                      "range": [
+                        -1,
+                        1
+                      ],
+                      "hover_info": "Camera up vector. Used to set a roll to the camera.",
+                      "completion_detail": "Camera up vector",
+                      "examples": [],
+                      "allow_multiple": false,
+                      "attributes": {},
+                      "children": {},
+                      "variants": [],
+                      "include": []
+                    }
+                  },
+                  "include": [],
+                  "allow_text": false,
+                  "text_type": null,
+                  "range": null,
+                  "enum_values": []
+                },
+                {
+                  "_type": "variant",
+                  "discriminator_attr": "type",
+                  "discriminator_value": "rotation",
+                  "hover_info": "Camera placement defined with a rotation",
+                  "attributes": {},
+                  "children": {
+                    "rotation": {
+                      "_type": "tag",
+                      "name": "rotation",
+                      "required": false,
+                      "allow_text": true,
+                      "text_type": "VEC3",
+                      "hover_info": "Rotation. Format depends on type attribute.",
+                      "completion_detail": "Rotation (vec3)",
+                      "examples": [],
+                      "allow_multiple": false,
+                      "attributes": {
+                        "type": {
+                          "_type": "attribute",
+                          "name": "type",
+                          "required": false,
+                          "type": "ENUM",
+                          "default_value": "euler",
+                          "enum_values": [
+                            "euler",
+                            "quaternion"
+                          ],
+                          "hover_info": "Rotation type: euler or quaternion.",
+                          "completion_detail": "Rotation type",
+                          "examples": []
+                        }
+                      },
+                      "children": {},
+                      "variants": [
+                        {
+                          "_type": "variant",
+                          "discriminator_attr": "type",
+                          "discriminator_value": "euler",
+                          "hover_info": "Euler rotation (yaw, pitch, roll)",
+                          "attributes": {},
+                          "children": {},
+                          "include": [],
+                          "allow_text": true,
+                          "text_type": "VEC3",
+                          "range": [
+                            0,
+                            360
+                          ],
+                          "enum_values": []
+                        },
+                        {
+                          "_type": "variant",
+                          "discriminator_attr": "type",
+                          "discriminator_value": "quaternion",
+                          "hover_info": "Surface rotation, expressed as a unit quaternion (x y z w).\n\nThe quaternion must be normalized : x² + y² + z² + w² = 1.\nUnnormalized values will be rejected by the parser.",
+                          "attributes": {},
+                          "children": {},
+                          "include": [],
+                          "allow_text": true,
+                          "text_type": null,
+                          "range": null,
+                          "enum_values": []
+                        }
+                      ],
+                      "include": []
+                    }
+                  },
+                  "include": [],
+                  "allow_text": false,
+                  "text_type": null,
+                  "range": null,
+                  "enum_values": []
+                }
+              ],
+              "include": []
+            }
+          },
+          "variants": [
+            {
+              "_type": "variant",
+              "discriminator_attr": "projection",
+              "discriminator_value": "perspective",
+              "hover_info": "A perspective camera and its properties.",
+              "attributes": {},
+              "children": {
+                "fov": {
+                  "_type": "tag",
+                  "name": "fov",
+                  "required": true,
+                  "allow_text": false,
+                  "text_type": null,
+                  "range": null,
+                  "hover_info": "Field of view of the camera",
+                  "completion_detail": "FOV of the camera",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {
+                    "mode": {
+                      "_type": "attribute",
+                      "name": "mode",
+                      "required": false,
+                      "type": "ENUM",
+                      "default_value": "simple",
+                      "range": null,
+                      "enum_values": [
+                        "simple",
+                        "physical"
+                      ],
+                      "hover_info": "Configuration mode of the FOV",
+                      "completion_detail": "Configuration mode of the FOV",
+                      "examples": []
+                    }
+                  },
+                  "children": {},
+                  "variants": [
+                    {
+                      "_type": "variant",
+                      "discriminator_attr": "mode",
+                      "discriminator_value": "simple",
+                      "hover_info": "Simple setup of the FOV",
+                      "attributes": {},
+                      "children": {},
+                      "include": [],
+                      "allow_text": true,
+                      "text_type": "FLOAT",
+                      "range": [
+                        1,
+                        180
+                      ]
+                    },
+                    {
+                      "_type": "variant",
+                      "discriminator_attr": "mode",
+                      "discriminator_value": "physical",
+                      "hover_info": "Physical setup of the FOV",
+                      "attributes": {
+                        "sensor_fit": {
+                          "_type": "attribute",
+                          "name": "sensor_fit",
+                          "required": false,
+                          "type": "ENUM",
+                          "default_value": "horizontal",
+                          "range": null,
+                          "enum_values": [
+                            "horizontal",
+                            "vertical"
+                          ],
+                          "hover_info": "Direction of the sensor used. If the sensor fit is horizontal, the sensor height will be adapted to match the resolution of the render. And that's the opposite with a vertical sensor fit.",
+                          "completion_detail": "Direction of the sensor used",
+                          "examples": []
+                        }
+                      },
+                      "children": {
+                        "focal_length": {
+                          "_type": "tag",
+                          "name": "focal_length",
+                          "required": true,
+                          "allow_text": true,
+                          "text_type": "FLOAT",
+                          "range": null,
+                          "hover_info": "Focal length of the camera",
+                          "completion_detail": "Focal length",
+                          "examples": [],
+                          "allow_multiple": false,
+                          "attributes": {},
+                          "children": {},
+                          "variants": [],
+                          "include": []
+                        },
+                        "sensor_width": {
+                          "_type": "tag",
+                          "name": "sensor_width",
+                          "required": true,
+                          "allow_text": true,
+                          "text_type": "FLOAT",
+                          "range": null,
+                          "hover_info": "Width of the sensor of your camera",
+                          "completion_detail": "Sensor width",
+                          "examples": [],
+                          "allow_multiple": false,
+                          "attributes": {},
+                          "children": {},
+                          "variants": [],
+                          "include": []
+                        },
+                        "sensor_height": {
+                          "_type": "tag",
+                          "name": "sensor_height",
+                          "required": true,
+                          "allow_text": true,
+                          "text_type": "FLOAT",
+                          "range": null,
+                          "hover_info": "Height of the sensor of your camera",
+                          "completion_detail": "Sensor Height",
+                          "examples": [],
+                          "allow_multiple": false,
+                          "attributes": {},
+                          "children": {},
+                          "variants": [],
+                          "include": []
+                        }
+                      },
+                      "include": [],
+                      "allow_text": false,
+                      "text_type": null,
+                      "range": null,
+                      "enum_values": []
+                    }
+                  ],
+                  "include": []
+                },
+                "f_stop": {
+                  "_type": "tag",
+                  "name": "f_stop",
+                  "required": false,
+                  "allow_text": true,
+                  "text_type": "FLOAT",
+                  "range": [
+                    0.5,
+                    64
+                  ],
+                  "hover_info": "Aperture of the lens, expressed as an f-stop (f/N).\n\nControls the radius of the sampling disk on the sensor —\nthe wider the aperture, the shallower the depth of field.\n\n- f/1.4  wide open — strong bokeh, very shallow focus\n- f/2.8\n- f/5.6\n- f/8    stopped down — sharp throughout, minimal bokeh\n- f/16",
+                  "completion_detail": "Aperture of the camera",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                },
+                "aperture_blades": {
+                  "_type": "tag",
+                  "name": "aperture_blades",
+                  "required": false,
+                  "allow_text": true,
+                  "text_type": "INT",
+                  "range": [
+                    0,
+                    64
+                  ],
+                  "hover_info": "Number of diaphragm blades",
+                  "completion_detail": "Number of diaphragm blades",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                },
+                "aperture_rotation": {
+                  "_type": "tag",
+                  "name": "aperture_rotation",
+                  "required": false,
+                  "allow_text": true,
+                  "text_type": "FLOAT",
+                  "range": [
+                    0,
+                    360
+                  ],
+                  "hover_info": "Rotation of the bokeh polygon (degrees)",
+                  "completion_detail": "Rotation of the bokeh polygon",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                },
+                "shutter_speed": {
+                  "_type": "tag",
+                  "name": "shutter_speed",
+                  "required": false,
+                  "allow_text": true,
+                  "text_type": "FLOAT",
+                  "range": null,
+                  "hover_info": "Change the shutter speed (used for motion blur in animations)",
+                  "completion_detail": "Shutter speed",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                }
+              },
+              "include": []
+            },
+            {
+              "_type": "variant",
+              "discriminator_attr": "projection",
+              "discriminator_value": "orthographic",
+              "hover_info": "An orthographic camera and its properties.",
+              "attributes": {},
+              "children": {
+                "ortho_scale": {
+                  "_type": "tag",
+                  "name": "ortho_scale",
+                  "required": false,
+                  "allow_text": true,
+                  "text_type": "FLOAT",
+                  "range": null,
+                  "hover_info": "Width of the visible zone (in world units)",
+                  "completion_detail": "Width of the visible zone",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                }
+              },
+              "include": [],
+              "allow_text": false,
+              "text_type": null,
+              "range": null,
+              "enum_values": []
+            },
+            {
+              "_type": "variant",
+              "discriminator_attr": "projection",
+              "discriminator_value": "fisheye",
+              "hover_info": "A fisheye camera and its properties.",
+              "attributes": {},
+              "children": {
+                "fisheye_fov": {
+                  "_type": "tag",
+                  "name": "fisheye_fov",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "FLOAT",
+                  "range": [
+                    1,
+                    360
+                  ],
+                  "hover_info": "FOV of the fisheye camera",
+                  "completion_detail": "Fisheye FOV",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                },
+                "fisheye_mapping": {
+                  "_type": "tag",
+                  "name": "fisheye_mapping",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "ENUM",
+                  "range": null,
+                  "hover_info": "Type of the fisheye mapping",
+                  "completion_detail": "Type of the fisheye mapping",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": [],
+                  "enum_values": [
+                    "equidistant",
+                    "equisolid",
+                    "orthographic",
+                    "stereographic"
+                  ]
+                }
+              },
+              "include": [],
+              "allow_text": false,
+              "text_type": null,
+              "range": null,
+              "enum_values": []
+            },
+            {
+              "_type": "variant",
+              "discriminator_attr": "projection",
+              "discriminator_value": "panoramic",
+              "hover_info": "A panoramic camera and its properties.",
+              "attributes": {},
+              "children": {
+                "panoramic_type": {
+                  "_type": "tag",
+                  "name": "panoramic_type",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "ENUM",
+                  "range": null,
+                  "hover_info": "Type of the panoramic projection",
+                  "completion_detail": "Type of the projection",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": [],
+                  "enum_values": [
+                    "equirectangular",
+                    "mercator"
+                  ]
+                }
+              },
+              "include": [],
+              "allow_text": false,
+              "text_type": null,
+              "range": null,
+              "enum_values": []
+            }
+          ],
+          "include": []
+        }
+      },
+      "variants": [],
+      "include": []
+    },
+    "render": {
+      "_type": "tag",
+      "name": "render",
+      "required": false,
+      "allow_text": false,
+      "text_type": null,
+      "range": null,
+      "hover_info": "Informations for the render",
+      "completion_detail": "Render information",
+      "examples": [],
+      "allow_multiple": false,
+      "attributes": {},
+      "children": {
+        "width": {
+          "_type": "tag",
+          "name": "width",
+          "required": true,
+          "allow_text": true,
+          "text_type": "INT",
+          "range": [
+            0,
+            65535
+          ],
+          "hover_info": "Width of the render",
+          "completion_detail": "Render width",
+          "examples": [],
+          "allow_multiple": false,
+          "attributes": {},
+          "children": {},
+          "variants": [],
+          "include": []
+        },
+        "height": {
+          "_type": "tag",
+          "name": "height",
+          "required": true,
+          "allow_text": true,
+          "text_type": "INT",
+          "range": [
+            0,
+            65535
+          ],
+          "hover_info": "Height of the render",
+          "completion_detail": "Render height",
+          "examples": [],
+          "allow_multiple": false,
+          "attributes": {},
+          "children": {},
+          "variants": [],
+          "include": []
+        },
+        "camera": {
+          "_type": "tag",
+          "name": "camera",
+          "required": true,
+          "allow_text": false,
+          "text_type": null,
+          "range": null,
+          "hover_info": "Choosen camera for the render",
+          "completion_detail": "Render camera",
+          "examples": [],
+          "allow_multiple": false,
+          "attributes": {
+            "ref": {
+              "_type": "attribute",
+              "name": "ref",
+              "required": true,
+              "type": "STRING",
+              "default_value": "",
+              "range": null,
+              "enum_values": [],
+              "hover_info": "ID of the camera used for the render",
+              "completion_detail": "Render camera reference",
+              "examples": []
+            }
+          },
+          "children": {},
+          "variants": [],
+          "include": []
+        },
+        "samples": {
+          "_type": "tag",
+          "name": "samples",
+          "required": false,
+          "allow_text": true,
+          "text_type": "INT",
+          "range": [
+            0,
+            2147483647
+          ],
+          "hover_info": "Amount of samples for the render",
+          "completion_detail": "Amount of samples for the render",
+          "examples": [],
+          "allow_multiple": false,
+          "attributes": {},
+          "children": {},
+          "variants": [],
+          "include": []
+        },
+        "max_bounces": {
+          "_type": "tag",
+          "name": "max_bounces",
+          "required": true,
+          "allow_text": true,
+          "text_type": "INT",
+          "range": [
+            0,
+            10000
+          ],
+          "hover_info": "Max amount of ray bounces",
+          "completion_detail": "Max amount of ray bounces",
+          "examples": [],
+          "allow_multiple": false,
+          "attributes": {},
+          "children": {},
+          "variants": [],
+          "include": []
+        },
+        "output": {
+          "_type": "tag",
+          "name": "output",
+          "required": false,
+          "allow_text": true,
+          "text_type": null,
+          "range": null,
+          "hover_info": "Render output file",
+          "completion_detail": "Render output file",
+          "examples": [],
+          "allow_multiple": false,
+          "attributes": {},
+          "children": {},
+          "variants": [],
+          "include": []
+        }
+      },
+      "variants": [],
+      "include": []
+    },
+    "textures": {
+      "_type": "tag",
+      "name": "textures",
+      "required": false,
+      "allow_text": false,
+      "text_type": null,
+      "range": null,
+      "hover_info": "List of the availables textures",
+      "completion_detail": "List of the availables textures",
+      "examples": [],
+      "allow_multiple": false,
+      "attributes": {},
+      "children": {
+        "texture": {
+          "_type": "tag",
+          "name": "texture",
+          "required": false,
+          "allow_text": false,
+          "text_type": null,
+          "range": null,
+          "hover_info": "Texture properties",
+          "completion_detail": "Texture properties",
+          "examples": [],
+          "allow_multiple": true,
+          "attributes": {
+            "type": {
+              "_type": "attribute",
+              "name": "type",
+              "required": false,
+              "type": "ENUM",
+              "default_value": "filepath",
+              "range": null,
+              "enum_values": [
+                "filepath",
+                "checker_local",
+                "checker_global"
+              ],
+              "hover_info": "Type of the texture",
+              "completion_detail": "Texture type",
+              "examples": []
+            },
+            "name": {
+              "_type": "attribute",
+              "name": "name",
+              "required": true,
+              "type": "STRING",
+              "default_value": "",
+              "range": null,
+              "enum_values": [],
+              "hover_info": "Unique identifier for the texture. Used as a reference for materials using it",
+              "completion_detail": "Texture unique identifier",
+              "examples": []
+            },
+            "label": {
+              "_type": "attribute",
+              "name": "label",
+              "required": false,
+              "type": "STRING",
+              "default_value": "",
+              "range": null,
+              "enum_values": [],
+              "hover_info": "Display name of the texture",
+              "completion_detail": "Display name",
+              "examples": []
+            }
+          },
+          "children": {},
+          "variants": [
+            {
+              "_type": "variant",
+              "discriminator_attr": "type",
+              "discriminator_value": "filepath",
+              "hover_info": "Texture from file",
+              "attributes": {},
+              "children": {
+                "path": {
+                  "_type": "tag",
+                  "name": "path",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "FILEPATH",
+                  "range": null,
+                  "hover_info": "Path of the texture",
+                  "completion_detail": "Path of the texture",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                }
+              },
+              "include": [],
+              "allow_text": false,
+              "text_type": null,
+              "range": null,
+              "enum_values": []
+            },
+            {
+              "_type": "variant",
+              "discriminator_attr": "type",
+              "discriminator_value": "checker_global",
+              "hover_info": "Global checker texture",
+              "attributes": {},
+              "children": {
+                "even": {
+                  "_type": "tag",
+                  "name": "even",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "COLOR",
+                  "range": null,
+                  "hover_info": "Even color of the checker",
+                  "completion_detail": "Even color of the checker",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                },
+                "odd": {
+                  "_type": "tag",
+                  "name": "odd",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "COLOR",
+                  "range": null,
+                  "hover_info": "Odd color of the checker",
+                  "completion_detail": "Odd color of the checker",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                },
+                "scale": {
+                  "_type": "tag",
+                  "name": "scale",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "FLOAT",
+                  "range": [
+                    null,
+                    null
+                  ],
+                  "hover_info": "Scale of the checker",
+                  "completion_detail": "Scale of the checker",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                }
+              },
+              "include": [],
+              "allow_text": false,
+              "text_type": null,
+              "range": null,
+              "enum_values": []
+            },
+            {
+              "_type": "variant",
+              "discriminator_attr": "type",
+              "discriminator_value": "checker_local",
+              "hover_info": "Local checker texture",
+              "attributes": {},
+              "children": {
+                "even": {
+                  "_type": "tag",
+                  "name": "even",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "COLOR",
+                  "range": null,
+                  "hover_info": "Even color of the checker",
+                  "completion_detail": "Even color of the checker",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                },
+                "odd": {
+                  "_type": "tag",
+                  "name": "odd",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "COLOR",
+                  "range": null,
+                  "hover_info": "Odd color of the checker",
+                  "completion_detail": "Odd color of the checker",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                },
+                "scale": {
+                  "_type": "tag",
+                  "name": "scale",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "FLOAT",
+                  "range": [
+                    null,
+                    null
+                  ],
+                  "hover_info": "Scale of the checker",
+                  "completion_detail": "Scale of the checker",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                }
+              },
+              "include": [],
+              "allow_text": false,
+              "text_type": null,
+              "range": null,
+              "enum_values": []
+            }
+          ],
+          "include": []
+        }
+      },
+      "variants": [],
+      "include": []
+    },
+    "lights": {
+      "_type": "tag",
+      "name": "lights",
+      "required": false,
+      "allow_text": false,
+      "text_type": null,
+      "range": null,
+      "hover_info": "Container for all analytical lights in the scene.\nEmissive surfaces are defined at the material level and are not listed here.",
+      "completion_detail": "Lights",
+      "examples": [],
+      "allow_multiple": false,
+      "attributes": {},
+      "children": {
+        "light": {
+          "_type": "tag",
+          "name": "light",
+          "required": false,
+          "allow_text": false,
+          "text_type": null,
+          "range": null,
+          "hover_info": "Defines an analytical light source. The expected children depend on the type attribute.",
+          "completion_detail": "Scene light",
+          "examples": [],
+          "allow_multiple": true,
+          "attributes": {
+            "type": {
+              "_type": "attribute",
+              "name": "type",
+              "required": true,
+              "type": "ENUM",
+              "default_value": "",
+              "range": null,
+              "enum_values": [
+                "point",
+                "directional"
+              ],
+              "hover_info": "Type of the light",
+              "completion_detail": "Type of the light",
+              "examples": []
+            }
+          },
+          "children": {
+            "color": {
+              "_type": "tag",
+              "name": "color",
+              "required": true,
+              "allow_text": true,
+              "text_type": "COLOR",
+              "range": null,
+              "hover_info": "Spectral color of the emitted light.",
+              "completion_detail": "Light color",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {},
+              "children": {},
+              "variants": [],
+              "include": []
+            },
+            "intensity": {
+              "_type": "tag",
+              "name": "intensity",
+              "required": false,
+              "allow_text": true,
+              "text_type": "FLOAT",
+              "range": null,
+              "hover_info": "Power of the light source.\n\nFor point lights, intensity falls off with the inverse square of the distance.\nFor directional lights, intensity is uniform regardless of distance.\n\nMultiplied by color to give the final emitted radiance.",
+              "completion_detail": "Light intensity",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {},
+              "children": {},
+              "variants": [],
+              "include": []
+            }
+          },
+          "variants": [
+            {
+              "_type": "variant",
+              "discriminator_attr": "type",
+              "discriminator_value": "point",
+              "hover_info": "Omnidirectional light emitting equally in all directions from a single point.\nIntensity falls off with the square of the distance (inverse square law).",
+              "attributes": {},
+              "children": {
+                "position": {
+                  "_type": "tag",
+                  "name": "position",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "VEC3",
+                  "range": null,
+                  "hover_info": "World-space position of the light source.\n",
+                  "completion_detail": "Light position",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                }
+              },
+              "include": [],
+              "allow_text": false,
+              "text_type": null,
+              "range": null,
+              "enum_values": []
+            },
+            {
+              "_type": "variant",
+              "discriminator_attr": "type",
+              "discriminator_value": "directional",
+              "hover_info": "Infinitely distant light source emitting parallel rays in a uniform direction.\nModels large, far away sources such as the sun or moon.\nHas no position — only direction and intensity matter.",
+              "attributes": {},
+              "children": {
+                "direction": {
+                  "_type": "tag",
+                  "name": "direction",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "VEC3",
+                  "range": [
+                    -1,
+                    1
+                  ],
+                  "hover_info": "World-space direction the light is emitting toward, as a normalized vec3.\nFor example (0 -1 0) points straight down.",
+                  "completion_detail": "Light direction",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                }
+              },
+              "include": [],
+              "allow_text": false,
+              "text_type": null,
+              "range": null,
+              "enum_values": []
+            }
+          ],
+          "include": []
+        }
+      },
+      "variants": [],
+      "include": []
+    },
+    "environment": {
+      "_type": "tag",
+      "name": "environment",
+      "required": false,
+      "allow_text": false,
+      "text_type": null,
+      "range": null,
+      "hover_info": "Defines the background and ambient lighting of the scene.\nContributes to global illumination — rays that escape all geometry sample this instead.",
+      "completion_detail": "Scene environment",
+      "examples": [],
+      "allow_multiple": false,
+      "attributes": {
+        "type": {
+          "_type": "attribute",
+          "name": "type",
+          "required": true,
+          "type": "ENUM",
+          "default_value": "",
+          "range": null,
+          "enum_values": [
+            "skybox",
+            "color"
+          ],
+          "hover_info": "Type of the used environment",
+          "completion_detail": "environment type",
+          "examples": []
+        }
+      },
+      "children": {},
+      "variants": [
+        {
+          "_type": "variant",
+          "discriminator_attr": "type",
+          "discriminator_value": "skybox",
+          "hover_info": "Spherical environment map used as the scene background and indirect light source.\nThe texture is projected onto an infinite sphere.\nExpects a high dynamic range image (.exr, .hdr) for physically accurate lighting.",
+          "attributes": {},
+          "children": {},
+          "include": [],
+          "allow_text": true,
+          "text_type": "FILEPATH",
+          "range": null,
+          "enum_values": []
+        },
+        {
+          "_type": "variant",
+          "discriminator_attr": "type",
+          "discriminator_value": "color",
+          "hover_info": "Radiance of the background, in linear RGB.\nValues above 1.0 are valid and act as an emissive background contributing to global illumination.\n\n- 0 0 0      black background, no ambient contribution\n- 1 1 1      white, uniformly lit scene\n- 0.5 0.7 1  light blue sky approximation",
+          "attributes": {},
+          "children": {},
+          "include": [],
+          "allow_text": true,
+          "text_type": "VEC3",
+          "range": null,
+          "enum_values": []
+        }
+      ],
+      "include": []
+    }
+  }
+}

@@ -50,6 +50,9 @@ struct ConditionalVariant
 
 	bool allow_text = false;
 	std::optional<ValueType> text_type;
+	
+	std::optional<std::pair<float, float>> range;	// INT/FLOAT/VEC
+	std::vector<std::string> enum_values;			// ENUM
 
 	std::string hover_info;
 
