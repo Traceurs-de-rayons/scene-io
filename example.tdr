@@ -1,5 +1,5 @@
 <textures>
-	<texture name="wood_albedo" label="Wood Albedo" type="filepath">
+	<texture name="wood_albedo" label="Wood Albedo">
 		<path>./textures/wood_albedo.png</path>
 	</texture>
 	<texture name="metal_normal" label="Metal Normal Map" type="filepath">

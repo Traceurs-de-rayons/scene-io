@@ -165,7 +165,7 @@ const std::string validType(ValueType type, const std::optional<std::pair<float,
 
 void analyseAttributes(const Node& tag, const TagSchema& tagSchema, ErrorCollector& errors)
 {
-	auto& attrs = tag.getAttributes();
+	auto& attrs = tag.attributes_;
 	auto& allowedAttrs = tagSchema.attributes;
 
 	for (auto attr = attrs.begin(); attr != attrs.end(); attr++)
@@ -239,7 +239,28 @@ TagSchema buildEffectiveSchema(const TagSchema& base, const Node& node)
 	if (base.variants.empty())
 		return base;
 
-	auto& attrs = node.getAttributes();
+	auto& attrs = node.attributes_;
+	auto& allowedAttrs = base.attributes;
+
+	for (const auto& allowed : allowedAttrs)
+	{
+		const std::string& name = allowed.first;
+		const AttributeSchema& schema = allowed.second;
+		if (attrs.find(name) == attrs.end() && schema.default_value.has_value())
+		{
+			const std::string def = *schema.default_value;
+			auto pos = node.getNodeBeginPos();
+
+			AttributeInfos ai;
+			ai.content = def;
+			ai.attr_line = pos.first;
+			ai.attr_column = pos.second;
+			ai.content_line = pos.first;
+			ai.content_column = pos.second;
+
+			attrs[name] = ai;
+		}
+	}
 
 	for (const auto& variant : base.variants)
 	{
@@ -272,15 +293,15 @@ TagSchema buildEffectiveSchema(const TagSchema& base, const Node& node)
 	return base;
 }
 
-void analyzeNodes(const Node& parent, const TagSchema& parentSchema, ErrorCollector& errors)
+void analyzeNodes(Node& parent, const TagSchema& parentSchema, ErrorCollector& errors)
 {
-	for (auto& node : parent.getChildren())
+	for (auto& node : parent.children_)
 	{
-		auto tagSchemaPair = parentSchema.children.find(node.getIdentifier());
+		auto tagSchemaPair = parentSchema.children.find(node.identifier_);
 		if (tagSchemaPair == parentSchema.children.end())
 		{
 			auto pos = node.getNodeBeginPos();
-			errors.report(TdrError(pos.first, pos.second, 1, "Unknown identifier '" + node.getIdentifier() + "'"));
+			errors.report(TdrError(pos.first, pos.second, 1, "Unknown identifier '" + node.identifier_ + "'"));
 			continue ;
 		}
 
@@ -289,7 +310,7 @@ void analyzeNodes(const Node& parent, const TagSchema& parentSchema, ErrorCollec
 		auto pos = node.getTextBeginPos();
 		if (!effectiveSchema.allow_text && !node.getText().empty())
 		{
-			errors.report(TdrError(pos.first, pos.second, 1, "Text is not allowed in '" + node.getIdentifier() + "'"));
+			errors.report(TdrError(pos.first, pos.second, 1, "Text is not allowed in '" + node.identifier_ + "'"));
 		}
 		else if (effectiveSchema.text_type.has_value())
 		{
@@ -309,9 +330,9 @@ void analyzeNodes(const Node& parent, const TagSchema& parentSchema, ErrorCollec
 	{
 		if (!requiredTag->second.required) continue ;
 		auto childExists = std::any_of(
-			parent.getChildren().begin(), 
-			parent.getChildren().end(),
-			[&requiredTag](const Node& child) { return child.getIdentifier() == requiredTag->first; }
+			parent.children_.begin(), 
+			parent.children_.end(),
+			[&requiredTag](const Node& child) { return child.identifier_ == requiredTag->first; }
 		);
 		if (!childExists)
 		{

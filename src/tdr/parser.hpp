@@ -8,6 +8,7 @@
 namespace sceneIO::tdr {
 
 class SceneSchema;
+struct TagSchema;
 
 struct AttributeInfos
 {
@@ -23,13 +24,17 @@ class Node
 private:
 	std::string identifier_;
 	std::vector<Node> children_;
-	std::map<std::string, AttributeInfos> attributes_;
+	mutable std::map<std::string, AttributeInfos> attributes_;
 	std::string text_;
 
 	std::vector<Token> tokens_;
 
 	friend Node parser(std::vector<Token>& list, ErrorCollector& errors);
+
 	friend void semanticAnalyzer(Node& ast, SceneSchema& sceneSchema, ErrorCollector& errors);
+	friend void analyzeNodes(Node& parent, const TagSchema& parentSchema, ErrorCollector& errors);
+	friend void analyseAttributes(const Node& tag, const TagSchema& tagSchema, ErrorCollector& errors);
+	friend TagSchema buildEffectiveSchema(const TagSchema& base, const Node& node);
 
 public:
 	Node(const std::string& identifier = "root") : identifier_(identifier) {}
