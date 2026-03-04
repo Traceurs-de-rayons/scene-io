@@ -23,6 +23,20 @@ static bool isValidByte(const std::string& s)
 	return ec == std::errc() && ptr == s.data() + s.size() && value >= 0 && value <= 255;
 }
 
+static bool isValidFloatColor(const std::string& s)
+{
+	if (s.empty()) return false;
+
+	float value;
+	auto [ptr, ec] = std::from_chars(
+		s.data(),
+		s.data() + s.size(),
+		value
+	);
+
+	return ec == std::errc() && ptr == s.data() + s.size() && value >= 0.0 && value <= 1.0;
+}
+
 bool isValidColor(const std::string& s)
 {
 	if (s.empty()) return false;
@@ -34,19 +48,16 @@ bool isValidColor(const std::string& s)
 		return true;
 	}
 
-	size_t first = s.find(',');
-	if (first == std::string::npos) return false;
-
-	size_t second = s.find(',', first + 1);
-	if (second == std::string::npos) return false;
-
-	if (s.find(',', second + 1) != std::string::npos) return false;
-
-	std::string r = s.substr(0, first);
-	std::string g = s.substr(first + 1, second - first - 1);
-	std::string b = s.substr(second + 1);
-
-	return isValidByte(r) && isValidByte(g) && isValidByte(b);
+	std::vector<std::string> parts = cu::string::split(s, ',');
+	if (parts.size() == 3)
+		return isValidByte(parts[0]) && isValidByte(parts[1]) && isValidByte(parts[2]);
+	else
+	{
+		parts = cu::string::split(s, ' ');
+		if (parts.size() == 3)
+			return isValidFloatColor(parts[0]) && isValidFloatColor(parts[1]) && isValidFloatColor(parts[2]);
+	}
+	return false;
 }
 
 std::string isValidFilePath(const std::string& pathStr)

@@ -9,15 +9,20 @@ namespace sceneIO::tdr {
 
 class SceneLoader
 {
-	private:
-		Scene scene_;
-		Node ast_;
-		ErrorCollector errors_;
 
-		void loadTextures();
+private:
+	Scene scene_;
+	Node ast_;
+	ErrorCollector errors_;
 
-	public:
-		Scene load(const std::string& path);
+	std::vector<sceneIO::tdr::Node>::const_iterator getChildElement(const Node& n, const std::string& name);
+
+	void loadTextures();
+	void debugTextures() const;
+
+public:
+	Scene load(const std::string& path);
+
 };
 
 }
