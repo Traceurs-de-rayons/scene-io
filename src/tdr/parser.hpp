@@ -31,9 +31,9 @@ private:
 
 	friend Node parser(std::vector<Token>& list, ErrorCollector& errors);
 
-	friend void semanticAnalyzer(Node& ast, SceneSchema& sceneSchema, ErrorCollector& errors);
-	friend void analyzeNodes(Node& parent, const TagSchema& parentSchema, ErrorCollector& errors);
-	friend void analyseAttributes(const Node& tag, const TagSchema& tagSchema, ErrorCollector& errors);
+	friend void semanticAnalyzer(Node& ast, SceneSchema& sceneSchema, ErrorCollector& errors, const std::string& baseDir);
+	friend void analyzeNodes(Node& parent, const TagSchema& parentSchema, ErrorCollector& errors, const std::string& baseDir);
+	friend void analyseAttributes(const Node& tag, const TagSchema& tagSchema, ErrorCollector& errors, const std::string& baseDir);
 	friend TagSchema buildEffectiveSchema(const TagSchema& base, const Node& node);
 
 public:

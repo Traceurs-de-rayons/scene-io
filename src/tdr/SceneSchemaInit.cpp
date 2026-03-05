@@ -468,20 +468,29 @@ void SceneSchema::build_schema()
 
 	root.children["assets"].children["asset"].attributes["type"] = AttributeSchema{
 		.name = "type",
-		.required = true,
+		.required = false,
 		.type = ValueType::ENUM,
+		.default_value = "object",
 		.enum_values = {"object", "primitive", "instance"},
 		.hover_info = "Type of asset: object (mesh from file), primitive (built-in shape), or instance (reference to another asset).",
 		.completion_detail = "Asset type (required)"
 	};
 
-	root.children["assets"].children["asset"].attributes["id"] = AttributeSchema{
-		.name = "id",
+	root.children["assets"].children["asset"].attributes["name"] = AttributeSchema{
+		.name = "name",
 		.required = true,
 		.type = ValueType::STRING,
 		.hover_info = "Unique identifier for this asset.",
-		.completion_detail = "Asset ID (required)",
+		.completion_detail = "Asset name (must be unique)",
 		.examples = {"id=\"my_object\""}
+	};
+
+	root.children["assets"].children["asset"].attributes["label"] = AttributeSchema{
+		.name = "label",
+		.required = false,
+		.type = ValueType::STRING,
+		.hover_info = "Display name of the object",
+		.completion_detail = "Display name of the object"
 	};
 
 	root.children["assets"].children["asset"].children["material"] = TagSchema{

@@ -709,7 +709,7 @@
             "type": {
               "_type": "attribute",
               "name": "type",
-              "required": true,
+              "required": false,
               "type": "ENUM",
               "enum_values": [
                 "object",
@@ -718,20 +718,33 @@
               ],
               "hover_info": "Type of asset: object (mesh from file), primitive (built-in shape), or instance (reference to another asset).",
               "completion_detail": "Asset type (required)",
-              "examples": []
+              "examples": [],
+              "default_value": "object"
             },
-            "id": {
+            "name": {
               "_type": "attribute",
-              "name": "id",
+              "name": "name",
               "required": true,
               "type": "STRING",
               "default_value": "",
               "enum_values": [],
               "hover_info": "Unique identifier for this asset.",
-              "completion_detail": "Asset ID (required)",
+              "completion_detail": "Asset name (must be unique)",
               "examples": [
                 "id=\"my_object\""
               ]
+            },
+            "label": {
+              "_type": "attribute",
+              "name": "label",
+              "required": false,
+              "type": "STRING",
+              "default_value": "",
+              "range": null,
+              "enum_values": [],
+              "hover_info": "Display name of the object",
+              "completion_detail": "Display name of the object",
+              "examples": []
             }
           },
           "children": {

@@ -1,5 +1,6 @@
 #include "tdr/LanguageService.hpp"
 #include "tdr/loadScene.hpp"
+#include "objParser.hpp"
 
 #include <charconv>
 
@@ -59,6 +60,12 @@ vec3 getColor(const std::string& s)
 	return vec3(0);
 }
 
+vec3 getVec3(const std::string& s)
+{
+	auto parts = cu::string::split(s, ' ');
+
+	return {getFloat(parts[0]), getFloat(parts[1]), getFloat(parts[1])};
+}
 
 void SceneLoader::debugTextures() const
 {
@@ -285,8 +292,174 @@ void SceneLoader::loadMaterials()
 	}
 }
 
+
+void SceneLoader::loadAssets()
+{
+	auto it = getChildElement(ast_, "assets");
+	
+	if (it == ast_.getChildren().end()) return ;
+
+	const Node& assets = *it;
+
+	for (const Node& asset_node : assets.getChildren())
+	{
+		const auto& asset_attr = asset_node.getAttributes();
+		const AttributeInfos& name = asset_attr.find("name")->second;
+		if (scene_.assets_.find(name.content) != scene_.assets_.end())
+		{
+			errors_.report(TdrError(name.content_line, name.content_column, 2, "Duplicated asset name, the asset will be ignored"));
+			continue;
+		}
+
+		Asset& asset = scene_.assets_[name.content];
+
+		asset.name_ = name.content;
+
+		auto label = asset_attr.find("label");
+		if (label != asset_attr.end()) asset.label_ = label->second.content;
+
+		const std::string& type = asset_attr.find("type")->second.content;
+	
+		if (type == "object")
+		{
+			const auto& obj = getChildElement(asset_node, "object");
+			const std::string& obj_type = obj->getAttributes().find("type")->second.content;
+
+			sceneIO::parser::ObjErrorCollector obj_errors;
+
+			if (obj_type == "external")
+			{
+				const std::string& path = obj->getAttributes().find("path")->second.content;
+				
+				sceneIO::parser::parseObj(asset, path, obj_errors);
+			}
+			else
+			{
+				std::istringstream ss(obj->getText());
+				const auto pos = obj->getTextBeginPos();
+
+				sceneIO::parser::parseObj(asset, ss, obj_errors, pos.first, pos.second);
+				obj_errors.setFilePath(path_);
+			}
+
+			bool obj_has_error = false;
+			for (const sceneIO::parser::ObjError& e : obj_errors.getErrors())
+			{
+				obj_has_error = true;
+				cu::logger::error(e.getError());
+			}
+
+			if (obj_has_error) throw std::runtime_error("Cannot open the scene with an error present on the file.");
+		}
+		else if (type == "primitive")
+		{
+			Asset::PrimitiveData tmp = {};
+
+			const auto& prim = getChildElement(asset_node, "primitive");
+			const std::string& prim_type = prim->getAttributes().find("type")->second.content;
+
+			
+			if (prim_type == "plane")
+			{
+				Asset::PrimitiveData::Plane tmp_prim = {};
+
+				tmp_prim.normal = getFloat(getChildElement(*prim, "normal")->getText());
+				
+				tmp.primitive = std::move(tmp_prim);
+			}
+			else if (prim_type == "sphere")
+			{
+				Asset::PrimitiveData::Sphere tmp_prim = {};
+
+				tmp_prim.radius = getFloat(getChildElement(*prim, "radius")->getText());
+				
+				tmp.primitive = std::move(tmp_prim);
+			}
+			else if (prim_type == "cylinder")
+			{
+				Asset::PrimitiveData::Cylinder tmp_prim = {};
+
+				tmp_prim.radius = getFloat(getChildElement(*prim, "radius")->getText());
+				tmp_prim.height = getFloat(getChildElement(*prim, "height")->getText());
+				
+				tmp.primitive = std::move(tmp_prim);
+			}
+			else if (prim_type == "cone")
+			{
+				Asset::PrimitiveData::Cone tmp_prim = {};
+
+				tmp_prim.radius = getFloat(getChildElement(*prim, "radius")->getText());
+				tmp_prim.height = getFloat(getChildElement(*prim, "height")->getText());
+				
+				tmp.primitive = std::move(tmp_prim);
+			}
+			else if (prim_type == "hyperboloid")
+			{
+				Asset::PrimitiveData::Hyperboloid tmp_prim = {};
+
+				tmp_prim.height = getFloat(getChildElement(*prim, "height")->getText());
+				tmp_prim.a = getFloat(getChildElement(*prim, "a")->getText());
+				tmp_prim.b = getFloat(getChildElement(*prim, "b")->getText());
+				tmp_prim.c = getFloat(getChildElement(*prim, "c")->getText());
+				tmp_prim.shape = getFloat(getChildElement(*prim, "shape")->getText());
+				
+				tmp.primitive = std::move(tmp_prim);
+			}
+
+			asset.content_ = std::move(tmp);
+		}
+		else if (type == "instance")
+		{
+			Asset::InstanceData tmp = {};
+
+			tmp.parent_name = getChildElement(asset_node, "parent")->getAttributes().find("ref")->second.content;
+
+			asset.content_ = std::move(tmp);
+		}
+
+		const auto& mat = getChildElement(asset_node, "material");
+		if (mat != asset_node.getChildren().end())
+		{
+			asset.material_ = mat->getAttributes().find("ref")->second.content;
+		}
+
+		const auto& transform = getChildElement(asset_node, "transform");
+		if (transform != asset_node.getChildren().end())
+		{
+			const auto& transform_pos = getChildElement(*transform, "position");
+			if (transform_pos != transform->getChildren().end())
+			{
+				asset.transform_.setTranslation(getVec3(transform_pos->getText()));
+			}
+
+			const auto& transform_rotation = getChildElement(*transform, "rotation");
+			if (transform_rotation != transform->getChildren().end())
+			{
+				std::string rot_type = transform_rotation->getAttributes().find("type")->second.content;
+
+				if (rot_type == "euler")
+				{
+					auto angles = getVec3(transform_rotation->getText());
+					asset.transform_.setEulerAngles(angles.x, angles.y, angles.z);
+				}
+				else
+				{
+					throw std::runtime_error("J'ai eu la flemme d'implementer le parsing des quaternions donc je throw. A un moment je le gererai hein");
+				}
+			}
+
+			const auto& transform_scale = getChildElement(*transform, "scale");
+			if (transform_scale != transform->getChildren().end())
+			{
+				asset.transform_.setScale(getVec3(transform_scale->getText()));
+			}
+		}
+	}
+}
+
 Scene SceneLoader::load(const std::string& path)
 {
+	path_ = path;
 	ParseResult res = SceneLanguageService::parse_file(path);
 	bool	has_error = false;
 
@@ -308,12 +481,12 @@ Scene SceneLoader::load(const std::string& path)
 	// res.ast.print();
 
 	loadTextures();
-	// debugTextures();
 	loadMaterials();
+	loadAssets();
 
 	for (TdrError e : errors_.get_errors())
 	{
-		e.location.filepath = path;
+		if (e.location.filepath.empty()) e.location.filepath = path;
 		if (e.getErrorLevel() == 1)
 		{
 			has_error = true;

@@ -26,6 +26,6 @@ bool isValidValue(const std::string& s, T& value)
 
 TagSchema buildEffectiveSchema(const TagSchema& base, const Node& node);
 
-void semanticAnalyzer(Node& ast, SceneSchema& sceneSchema, ErrorCollector& errors);
+void semanticAnalyzer(Node& ast, SceneSchema& sceneSchema, ErrorCollector& errors, const std::string& filePath = "");
 
 }

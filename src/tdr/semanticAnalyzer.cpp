@@ -60,7 +60,7 @@ bool isValidColor(const std::string& s)
 	return false;
 }
 
-std::string isValidFilePath(const std::string& pathStr)
+std::string isValidFilePath(const std::string& pathStr, const std::string& baseDir)
 {
 	if (pathStr.empty()) return "Invalid file path: path is empty";
 
@@ -68,6 +68,8 @@ std::string isValidFilePath(const std::string& pathStr)
 	std::error_code ec;
 
 	fs::path path(pathStr);
+	if (path.is_relative() && !baseDir.empty())
+		path = fs::path(baseDir) / path;
 
 	if (!fs::exists(path, ec))
 	{
@@ -93,7 +95,7 @@ std::string isValidFilePath(const std::string& pathStr)
 	return "";
 }
 
-const std::string validType(ValueType type, const std::optional<std::pair<float, float>>& attrRange, const std::vector<std::string>& attrEnum, const std::string& param, ErrorCollector& errors)
+const std::string validType(ValueType type, const std::optional<std::pair<float, float>>& attrRange, const std::vector<std::string>& attrEnum, const std::string& param, ErrorCollector& errors, const std::string& baseDir)
 {
 	switch (type)
 	{
@@ -157,7 +159,7 @@ const std::string validType(ValueType type, const std::optional<std::pair<float,
 		}
 		case ValueType::FILEPATH:
 		{
-			return isValidFilePath(param);
+			return isValidFilePath(param, baseDir);
 		}
 		case ValueType::ENUM:
 		{
@@ -174,7 +176,7 @@ const std::string validType(ValueType type, const std::optional<std::pair<float,
 	return "Invalid parameter type. Required: " + printValueType(type);
 }
 
-void analyseAttributes(const Node& tag, const TagSchema& tagSchema, ErrorCollector& errors)
+void analyseAttributes(const Node& tag, const TagSchema& tagSchema, ErrorCollector& errors, const std::string& baseDir)
 {
 	auto& attrs = tag.attributes_;
 	auto& allowedAttrs = tagSchema.attributes;
@@ -188,7 +190,7 @@ void analyseAttributes(const Node& tag, const TagSchema& tagSchema, ErrorCollect
 			continue ;
 		}
 
-		const std::string typeError = validType(attrSchema->second.type, attrSchema->second.range, attrSchema->second.enum_values, attr->second.content, errors);
+		const std::string typeError = validType(attrSchema->second.type, attrSchema->second.range, attrSchema->second.enum_values, attr->second.content, errors, baseDir);
 		if (!typeError.empty()) errors.report(TdrError(attr->second.content_line, attr->second.content_column, attrSchema->second.type == ValueType::FILEPATH ? 2 : 1, typeError));
 	}
 
@@ -304,7 +306,7 @@ TagSchema buildEffectiveSchema(const TagSchema& base, const Node& node)
 	return base;
 }
 
-void analyzeNodes(Node& parent, const TagSchema& parentSchema, ErrorCollector& errors)
+void analyzeNodes(Node& parent, const TagSchema& parentSchema, ErrorCollector& errors, const std::string& baseDir)
 {
 	for (auto& node : parent.children_)
 	{
@@ -325,12 +327,12 @@ void analyzeNodes(Node& parent, const TagSchema& parentSchema, ErrorCollector& e
 		}
 		else if (effectiveSchema.text_type.has_value())
 		{
-			const std::string typeError = validType(effectiveSchema.text_type.value(), effectiveSchema.range, effectiveSchema.enum_values, node.getText(), errors);
+			const std::string typeError = validType(effectiveSchema.text_type.value(), effectiveSchema.range, effectiveSchema.enum_values, node.getText(), errors, baseDir);
 			if (!typeError.empty()) errors.report(TdrError(pos.first, pos.second, effectiveSchema.text_type.value() == ValueType::FILEPATH ? 2 : 1, typeError));
 		}
 
-		analyseAttributes(node, effectiveSchema, errors);
-		analyzeNodes(node, effectiveSchema, errors);
+		analyseAttributes(node, effectiveSchema, errors, baseDir);
+		analyzeNodes(node, effectiveSchema, errors, baseDir);
 	}
 
 	validateMultiplicity(parent, parentSchema, errors);
@@ -353,9 +355,13 @@ void analyzeNodes(Node& parent, const TagSchema& parentSchema, ErrorCollector& e
 	}
 }
 
-void semanticAnalyzer(Node& ast, SceneSchema& sceneSchema, ErrorCollector& errors)
+void semanticAnalyzer(Node& ast, SceneSchema& sceneSchema, ErrorCollector& errors, const std::string& filePath)
 {
-	analyzeNodes(ast, sceneSchema.root, errors);
+	namespace fs = std::filesystem;
+	std::string baseDir;
+	if (!filePath.empty())
+		baseDir = fs::path(filePath).parent_path().string();
+	analyzeNodes(ast, sceneSchema.root, errors, baseDir);
 }
 
 }

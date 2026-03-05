@@ -65,8 +65,9 @@
 </materials>
 
 <assets>
-	<asset type="object" id="teapot">
-		<object type="external" path="./meshes/teapot.obj"/>
+	<asset type="object" name="teapot">
+		// <object type="external" path="./meshes/teapot.obj"/>
+		<object type="external" path="test.obj"/>
 		<material ref="mat_metal"/>
 		<transform>
 			<position>0 0 0</position>
@@ -75,12 +76,12 @@
 		</transform>
 	</asset>
 
-	<asset type="object" id="triangle_raw">
+	<asset type="object" name="triangle_raw">
 		<object type="raw">
 			v 0 0 0
 			v 1 0 0
 			v 0 1 0
-			f 1 2 0
+			f 1 2 3
 		</object>
 		<material ref="mat_emissive"/>
 		<transform>
@@ -88,7 +89,7 @@
 		</transform>
 	</asset>
 
-	<asset type="primitive" id="glass_ball">
+	<asset type="primitive" name="glass_ball">
 		<primitive type="sphere">
 			<radius>1.0</radius>
 		</primitive>
@@ -98,7 +99,7 @@
 		</transform>
 	</asset>
 
-	<asset type="primitive" id="floor">
+	<asset type="primitive" name="floor">
 		<primitive type="plane">
 			<normal>0 1 0</normal>
 		</primitive>
@@ -108,7 +109,7 @@
 		</transform>
 	</asset>
 
-	<asset type="primitive" id="pillar">
+	<asset type="primitive" name="pillar">
 		<primitive type="cylinder">
 			<radius>0.3</radius>
 			<height>4.0</height>
@@ -119,7 +120,7 @@
 		</transform>
 	</asset>
 
-	<asset type="primitive" id="cone_obj">
+	<asset type="primitive" name="cone_obj">
 		<primitive type="cone">
 			<radius>0.5</radius>
 			<height>1.5</height>
@@ -127,11 +128,11 @@
 		<material ref="mat_metal"/>
 		<transform>
 			<position>-1 0 3</position>
-			<rotation type="quaternion">0 0 0 1</rotation>
+			<rotation>0 0 0</rotation>
 		</transform>
 	</asset>
 
-	<asset type="primitive" id="hyperboloid_obj">
+	<asset type="primitive" name="hyperboloid_obj">
 		<primitive type="hyperboloid">
 			<height>2.0</height>
 			<a>0.5</a>
@@ -145,7 +146,7 @@
 		</transform>
 	</asset>
 
-	<asset type="instance" id="glass_ball_copy">
+	<asset type="instance" name="glass_ball_copy">
 		<parent ref="glass_ball"/>
 		<transform>
 			<position>3 1 1</position>
@@ -153,11 +154,11 @@
 		</transform>
 	</asset>
 
-	<asset type="instance" id="pillar_copy">
+	<asset type="instance" name="pillar_copy">
 		<parent ref="pillar"/>
 		<transform>
 			<position>-4 0 -2</position>
-			<rotation type="quaternion">0 0.383 0 0.924</rotation>
+			<rotation>0 0 0</rotation>
 		</transform>
 	</asset>
 </assets>

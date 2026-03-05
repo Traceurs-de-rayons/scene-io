@@ -48,7 +48,7 @@ ParseResult SceneLanguageService::parse_file(const std::string& path)
 		Node ast = parser(tokens, errors);
 
 		SceneSchema sch;
-		semanticAnalyzer(ast, sch, errors);
+		semanticAnalyzer(ast, sch, errors, path);
 
 		errors.setFilePath(path);
 		return {std::move(ast), errors.get_errors()};
