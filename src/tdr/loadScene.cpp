@@ -75,23 +75,23 @@ void SceneLoader::debugTextures() const
 			msg += " type=filepath path=\"" + ff.path + "\"";
 			if (ff.state == TextureState::Loaded || ff.state == TextureState::Uploaded)
 				msg += " size=" + std::to_string(ff.width) + "x" + std::to_string(ff.height)
-				     + " channels=" + std::to_string(ff.channels);
+					+ " channels=" + std::to_string(ff.channels);
 		}
 		else if (std::holds_alternative<Texture::CheckerLocal>(tex.data))
 		{
 			const auto& cl = std::get<Texture::CheckerLocal>(tex.data);
 			msg += " type=checker_local"
-			     + std::string(" even=(") + std::to_string(cl.even.x) + "," + std::to_string(cl.even.y) + "," + std::to_string(cl.even.z) + ")"
-			     + " odd=("  + std::to_string(cl.odd.x)  + "," + std::to_string(cl.odd.y)  + "," + std::to_string(cl.odd.z)  + ")"
-			     + " scale=" + std::to_string(cl.scale);
+				+ std::string(" even=(") + std::to_string(cl.even.x) + "," + std::to_string(cl.even.y) + "," + std::to_string(cl.even.z) + ")"
+				+ " odd=("  + std::to_string(cl.odd.x)  + "," + std::to_string(cl.odd.y)  + "," + std::to_string(cl.odd.z)  + ")"
+				+ " scale=" + std::to_string(cl.scale);
 		}
 		else if (std::holds_alternative<Texture::CheckerGlobal>(tex.data))
 		{
 			const auto& cg = std::get<Texture::CheckerGlobal>(tex.data);
 			msg += " type=checker_global"
-			     + std::string(" even=(") + std::to_string(cg.even.x) + "," + std::to_string(cg.even.y) + "," + std::to_string(cg.even.z) + ")"
-			     + " odd=("  + std::to_string(cg.odd.x)  + "," + std::to_string(cg.odd.y)  + "," + std::to_string(cg.odd.z)  + ")"
-			     + " scale=" + std::to_string(cg.scale);
+				+ std::string(" even=(") + std::to_string(cg.even.x) + "," + std::to_string(cg.even.y) + "," + std::to_string(cg.even.z) + ")"
+				+ " odd=("  + std::to_string(cg.odd.x)  + "," + std::to_string(cg.odd.y)  + "," + std::to_string(cg.odd.z)  + ")"
+				+ " scale=" + std::to_string(cg.scale);
 		}
 
 		cu::logger::info(msg);
@@ -153,6 +153,138 @@ void SceneLoader::loadTextures()
 	}
 }
 
+
+void SceneLoader::loadMaterials()
+{
+	auto it = getChildElement(ast_, "materials");
+	
+	if (it == ast_.getChildren().end()) return ;
+
+	const Node& materials = *it;
+
+	for (const Node& material : materials.getChildren())
+	{
+		const auto& mat_attr = material.getAttributes();
+		const AttributeInfos& name = mat_attr.find("name")->second;
+		if (scene_.materials_.find(name.content) != scene_.materials_.end())
+		{
+			errors_.report(TdrError(name.content_line, name.content_column, 2, "Duplicated material name, it will be ignored"));
+			continue;
+		}
+
+		Material& mat = scene_.materials_[name.content];
+
+		mat.name = name.content;
+
+		auto label = mat_attr.find("label");
+		if (label != mat_attr.end()) mat.label = label->second.content;
+
+
+		for (const Node& prop : material.getChildren())
+		{
+			const auto& prop_attr = prop.getAttributes();
+			const auto& type_it = prop_attr.find("type");
+
+			if (type_it != prop_attr.end() && type_it->second.content == "texture")
+			{
+				if (scene_.textures_.find(prop.getText()) == scene_.textures_.end())
+				{
+					const auto& pos = prop.getTextBeginPos();
+					errors_.report(TdrError(pos.first, pos.second, 2, "Unknown texture reference '"+ prop.getText() +"' in material '"+ mat.name +"' (property: "+ prop.getIdentifier() +")."));
+				}
+			}
+
+			if (prop.getIdentifier() == "albedo")
+			{
+				const std::string& type = type_it->second.content;
+				if (type == "texture")
+					mat.albedo = MaterialParam<cu::math::vec3>{ prop.getText() };
+				else
+					mat.albedo = MaterialParam<cu::math::vec3>{ getColor(prop.getText()) };
+			}
+			else if (prop.getIdentifier() == "metallic")
+			{
+				const std::string& type = type_it->second.content;
+
+				if (type == "texture")
+					mat.metallic = MaterialParam<float>{ prop.getText() };
+				else
+					mat.metallic = MaterialParam<float>{ getFloat(prop.getText()) };
+			}
+			else if (prop.getIdentifier() == "roughness")
+			{
+				const std::string& type = type_it->second.content;
+
+				if (type == "texture")
+					mat.roughness = MaterialParam<float>{ prop.getText() };
+				else
+					mat.roughness = MaterialParam<float>{ getFloat(prop.getText()) };
+			}
+			else if (prop.getIdentifier() == "transmission")
+			{
+				const std::string& type = type_it->second.content;
+
+				if (type == "texture")
+					mat.transmission = MaterialParam<float>{ prop.getText() };
+				else
+					mat.transmission = MaterialParam<float>{ getFloat(prop.getText()) };
+			}
+			else if (prop.getIdentifier() == "ambient_occlusion")
+			{
+				const std::string& type = type_it->second.content;
+
+				if (type == "texture")
+					mat.ambient_occlusion = MaterialParam<float>{ prop.getText() };
+				else
+					mat.ambient_occlusion = MaterialParam<float>{ getFloat(prop.getText()) };
+			}
+			else if (prop.getIdentifier() == "roughness")
+			{
+				const std::string& type = type_it->second.content;
+
+				if (type == "texture")
+					mat.roughness = MaterialParam<float>{ prop.getText() };
+				else
+					mat.roughness = MaterialParam<float>{ getFloat(prop.getText()) };
+			}
+			else if (prop.getIdentifier() == "emission_strength")
+			{
+				const std::string& type = type_it->second.content;
+
+				if (type == "texture")
+					mat.emission_strength = MaterialParam<float>{ prop.getText() };
+				else
+					mat.emission_strength = MaterialParam<float>{ getFloat(prop.getText()) };
+			}
+			else if (prop.getIdentifier() == "emission_color")
+			{
+				const std::string& type = type_it->second.content;
+
+				if (type == "texture")
+					mat.emission_color = MaterialParam<cu::math::vec3>{ prop.getText() };
+				else
+					mat.emission_color = MaterialParam<cu::math::vec3>{ getColor(prop.getText()) };
+			}
+			else if (prop.getIdentifier() == "ior")
+			{
+				mat.ior = getFloat(prop.getText());
+			}
+			else if (prop.getIdentifier() == "texture_scale")
+			{
+				mat.texture_scale = getFloat(prop.getText());
+			}
+			else if (prop.getIdentifier() == "normal_map")
+			{
+				mat.normal_map = prop.getText();
+			}
+			else if (prop.getIdentifier() == "normal_intensity")
+			{
+				mat.normal_intensity = getFloat(prop.getText());
+			}
+		}
+	}
+}
+
 Scene SceneLoader::load(const std::string& path)
 {
 	ParseResult res = SceneLanguageService::parse_file(path);
@@ -176,7 +308,22 @@ Scene SceneLoader::load(const std::string& path)
 	// res.ast.print();
 
 	loadTextures();
-	debugTextures();
+	// debugTextures();
+	loadMaterials();
+
+	for (TdrError e : errors_.get_errors())
+	{
+		e.location.filepath = path;
+		if (e.getErrorLevel() == 1)
+		{
+			has_error = true;
+			cu::logger::error(e.getError());
+		}
+		else if (e.getErrorLevel() == 2) cu::logger::warn(e.getError());
+		else cu::logger::info(e.getError());
+	}
+
+	if (has_error) throw std::runtime_error("Cannot open the scene with an error present on the file.");
 
 	return std::move(scene_);
 }
