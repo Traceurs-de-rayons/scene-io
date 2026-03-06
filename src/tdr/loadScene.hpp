@@ -25,6 +25,8 @@ private:
 	void loadAssets();
 	void loadCameras();
 	void loadLights();
+	void loadRender();
+	void loadEnvironment();
 
 public:
 	Scene load(const std::string& path);

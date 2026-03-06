@@ -656,6 +656,64 @@ void SceneLoader::loadLights()
 	}
 }
 
+void SceneLoader::loadRender()
+{
+	auto it = getChildElement(ast_, "render");
+
+	if (it == ast_.getChildren().end()) return;
+
+	const Node& render = *it;
+
+	RenderSettings render_settings;
+
+	render_settings.width = getInt(getChildElement(render, "width")->getText());
+	render_settings.height = getInt(getChildElement(render, "height")->getText());
+	auto& cam = getChildElement(render, "camera")->getAttributes().find("ref")->second;
+	render_settings.camera = cam.content;
+
+	if (scene_.cameras_.find(cam.content) == scene_.cameras_.end())
+	{
+		errors_.report(TdrError(cam.content_line, cam.content_column, 1, "Render camera ref does not exist"));
+		return ;
+	}
+
+	render_settings.max_bounces = getInt(getChildElement(render, "max_bounces")->getText());
+
+	auto samples_it = getChildElement(render, "samples");
+	if (samples_it != render.getChildren().end())
+		render_settings.samples = getInt(samples_it->getText());
+
+	auto output_it = getChildElement(render, "output");
+	if (output_it != render.getChildren().end())
+		render_settings.output_file = output_it->getText();
+	
+}
+
+void SceneLoader::loadEnvironment()
+{
+	auto it = getChildElement(ast_, "environment");
+
+	if (it == ast_.getChildren().end()) return;
+
+	const Node& env = *it;
+
+	const std::string& env_type = env.getAttributes().find("type")->second.content;
+
+	if (env_type == "skybox")
+	{
+		Environment::Skybox skybox;
+
+		skybox.path = getChildElement(env, "skybox")->getText();
+		skybox.rotation = getFloat(getChildElement(env, "rotation")->getText());
+
+		scene_.environment_.env = std::move(skybox);
+	}
+	else
+	{
+		scene_.environment_.env = getVec3(getChildElement(env, "color")->getText());
+	}
+}
+
 Scene SceneLoader::load(const std::string& path)
 {
 	path_ = path;

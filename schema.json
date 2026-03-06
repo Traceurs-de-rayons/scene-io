@@ -2341,9 +2341,45 @@
           "discriminator_value": "skybox",
           "hover_info": "Spherical environment map used as the scene background and indirect light source.\nThe texture is projected onto an infinite sphere.\nExpects a high dynamic range image (.exr, .hdr) for physically accurate lighting.",
           "attributes": {},
-          "children": {},
+          "children": {
+            "skybox": {
+              "_type": "tag",
+              "name": "skybox",
+              "required": true,
+              "allow_text": true,
+              "text_type": "FILEPATH",
+              "range": null,
+              "hover_info": "Spherical environment map used as the scene background and indirect light source.\nThe texture is projected onto an infinite sphere.\nExpects a high dynamic range image (.exr, .hdr) for physically accurate lighting.",
+              "completion_detail": "Skybox file path",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {},
+              "children": {},
+              "variants": [],
+              "include": []
+            },
+            "rotation": {
+              "_type": "tag",
+              "name": "rotation",
+              "required": false,
+              "allow_text": true,
+              "text_type": "FLOAT",
+              "range": [
+                0,
+                360
+              ],
+              "hover_info": "Skybox rotation around the y axe",
+              "completion_detail": "Skybox rotation (around y axe)",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {},
+              "children": {},
+              "variants": [],
+              "include": []
+            }
+          },
           "include": [],
-          "allow_text": true,
+          "allow_text": false,
           "text_type": "FILEPATH",
           "range": null,
           "enum_values": []
@@ -2354,9 +2390,26 @@
           "discriminator_value": "color",
           "hover_info": "Radiance of the background, in linear RGB.\nValues above 1.0 are valid and act as an emissive background contributing to global illumination.\n\n- 0 0 0      black background, no ambient contribution\n- 1 1 1      white, uniformly lit scene\n- 0.5 0.7 1  light blue sky approximation",
           "attributes": {},
-          "children": {},
+          "children": {
+            "color": {
+              "_type": "tag",
+              "name": "color",
+              "required": true,
+              "allow_text": true,
+              "text_type": "VEC3",
+              "range": null,
+              "hover_info": "Radiance of the background, in linear RGB.\nValues above 1.0 are valid and act as an emissive background contributing to global illumination.\n\n- 0 0 0      black background, no ambient contribution\n- 1 1 1      white, uniformly lit scene\n- 0.5 0.7 1  light blue sky approximation",
+              "completion_detail": "Skybox color",
+              "examples": [],
+              "allow_multiple": false,
+              "attributes": {},
+              "children": {},
+              "variants": [],
+              "include": []
+            }
+          },
           "include": [],
-          "allow_text": true,
+          "allow_text": false,
           "text_type": "VEC3",
           "range": null,
           "enum_values": []

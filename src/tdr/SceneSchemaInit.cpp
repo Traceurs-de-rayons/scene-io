@@ -1490,8 +1490,28 @@ void SceneSchema::build_schema()
 		v41.discriminator_attr = "type";
 		v41.discriminator_value = "skybox";
 		v41.hover_info = "Spherical environment map used as the scene background and indirect light source.\nThe texture is projected onto an infinite sphere.\nExpects a high dynamic range image (.exr, .hdr) for physically accurate lighting.";
-		v41.allow_text = true;
-		v41.text_type = ValueType::FILEPATH;
+		v41.allow_text = false;
+
+		v41.children["skybox"] = TagSchema{
+			.name = "skybox",
+			.required = true,
+			.allow_text = true,
+			.text_type = ValueType::FILEPATH,
+			.hover_info = "Spherical environment map used as the scene background and indirect light source.\nThe texture is projected onto an infinite sphere.\nExpects a high dynamic range image (.exr, .hdr) for physically accurate lighting.",
+			.completion_detail = "Skybox file path",
+			.allow_multiple = false
+		};
+
+		v41.children["rotation"] = TagSchema{
+			.name = "rotation",
+			.required = false,
+			.allow_text = true,
+			.text_type = ValueType::FLOAT,
+			.range = std::make_pair(0, 360),
+			.hover_info = "Skybox rotation around the y axe",
+			.completion_detail = "Skybox rotation (around y axe)",
+			.allow_multiple = false
+		};
 
 		root.children["environment"].variants.push_back(std::move(v41));
 	}
@@ -1501,8 +1521,17 @@ void SceneSchema::build_schema()
 		v42.discriminator_attr = "type";
 		v42.discriminator_value = "color";
 		v42.hover_info = "Radiance of the background, in linear RGB.\nValues above 1.0 are valid and act as an emissive background contributing to global illumination.\n\n- 0 0 0      black background, no ambient contribution\n- 1 1 1      white, uniformly lit scene\n- 0.5 0.7 1  light blue sky approximation";
-		v42.allow_text = true;
-		v42.text_type = ValueType::VEC3;
+		v42.allow_text = false;
+
+		v42.children["color"] = TagSchema{
+			.name = "color",
+			.required = true,
+			.allow_text = true,
+			.text_type = ValueType::VEC3,
+			.hover_info = "Radiance of the background, in linear RGB.\nValues above 1.0 are valid and act as an emissive background contributing to global illumination.\n\n- 0 0 0      black background, no ambient contribution\n- 1 1 1      white, uniformly lit scene\n- 0.5 0.7 1  light blue sky approximation",
+			.completion_detail = "Skybox color",
+			.allow_multiple = false
+		};
 
 		root.children["environment"].variants.push_back(std::move(v42));
 	}

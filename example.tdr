@@ -181,7 +181,9 @@
 	</light>
 </lights>
 
-<environment type="skybox">./hdri/studio.exr</environment>
+<environment type="skybox">
+	<skybox>./hdri/studio.exr</skybox>
+</environment>
 
 <cameras>
 	<camera name="cam_main" label="Main Camera" projection="perspective">
