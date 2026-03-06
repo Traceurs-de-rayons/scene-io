@@ -60,7 +60,7 @@ public:
 	{
 		for (TdrError& e : errors_)
 		{
-			e.location.filepath = path;
+			if (e.location.filepath.empty()) e.location.filepath = path;
 		}
 	}
 	

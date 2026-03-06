@@ -7,7 +7,7 @@
 
 namespace sceneIO::tdr {
 
-ParseResult SceneLanguageService::parse_content(const std::string& content)
+ParseResult SceneLanguageService::parse_content(const std::string& content, const std::string& filePath)
 {
 	ErrorCollector errors;
 
@@ -19,7 +19,10 @@ ParseResult SceneLanguageService::parse_content(const std::string& content)
 		Node ast = parser(tokens, errors);
 
 		SceneSchema sch;
-		semanticAnalyzer(ast, sch, errors);
+		semanticAnalyzer(ast, sch, errors, filePath);
+
+		if (!filePath.empty())
+			errors.setFilePath(filePath);
 
 		return {std::move(ast), errors.get_errors()};
 	}
