@@ -21,7 +21,9 @@ elseif (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 	target_compile_options(scene-io PUBLIC /std:c++latest)
 endif()
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../scene-core scene-core-build)
+if(NOT TARGET scene-core)
+	add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../scene-core scene-core-build)
+endif()
 
 target_link_libraries(scene-io PUBLIC scene-core)
 
