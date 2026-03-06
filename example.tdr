@@ -243,7 +243,7 @@
 	<camera name="cam_360" label="360 Panoramic" projection="panoramic">
 		<placement type="rotation">
 			<position>0 1.7 0</position>
-			<rotation type="quaternion">0 0 0 1</rotation>
+			<rotation type="euler">0 0 0</rotation>
 		</placement>
 		<panoramic_type>equirectangular</panoramic_type>
 	</camera>

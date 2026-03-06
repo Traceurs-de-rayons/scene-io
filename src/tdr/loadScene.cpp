@@ -35,6 +35,17 @@ static float getFloat(const std::string& s)
 	return value;
 }
 
+static int getInt(const std::string& s)
+{
+	int value = 0.0;
+	auto [ptr, ec] = std::from_chars(
+		s.data(),
+		s.data() + s.size(),
+		value
+	);
+	return value;
+}
+
 vec3 getColor(const std::string& s)
 {
 	if (s.empty()) return false;
@@ -65,6 +76,13 @@ vec3 getVec3(const std::string& s)
 	auto parts = cu::string::split(s, ' ');
 
 	return {getFloat(parts[0]), getFloat(parts[1]), getFloat(parts[1])};
+}
+
+quat getQuat(const std::string& s)
+{
+	throw std::runtime_error("J'ai eu la flemme d'implementer le parsing des quaternions donc je throw. A un moment je le gererai hein");
+	auto parts = cu::string::split(s, ' ');
+	return quat(getFloat(parts[3]), getFloat(parts[0]), getFloat(parts[1]), getFloat(parts[2]));
 }
 
 void SceneLoader::debugTextures() const
@@ -444,6 +462,7 @@ void SceneLoader::loadAssets()
 				}
 				else
 				{
+					asset.transform_.setRotation(getQuat(transform_rotation->getText()));
 					throw std::runtime_error("J'ai eu la flemme d'implementer le parsing des quaternions donc je throw. A un moment je le gererai hein");
 				}
 			}
@@ -453,6 +472,144 @@ void SceneLoader::loadAssets()
 			{
 				asset.transform_.setScale(getVec3(transform_scale->getText()));
 			}
+		}
+	}
+}
+
+void SceneLoader::loadCameras()
+{
+	auto it = getChildElement(ast_, "cameras");
+
+	if (it == ast_.getChildren().end()) return;
+
+	const Node& cameras = *it;
+
+	for (const Node& camera_node : cameras.getChildren())
+	{
+		const auto& cam_attr = camera_node.getAttributes();
+		const AttributeInfos& name = cam_attr.find("name")->second;
+
+		if (scene_.cameras_.find(name.content) != scene_.cameras_.end())
+		{
+			errors_.report(TdrError(name.content_line, name.content_column, 2, "Duplicated camera name, it will be ignored"));
+			continue;
+		}
+
+		Camera& cam = scene_.cameras_[name.content];
+		cam.name = name.content;
+
+		auto label = cam_attr.find("label");
+		if (label != cam_attr.end()) cam.label = label->second.content;
+
+		const std::string& projection = cam_attr.find("projection")->second.content;
+
+		if (projection == "perspective")
+		{
+			Camera::Perspective persp = {};
+
+			const Node& fov_node = *getChildElement(camera_node, "fov");
+			const std::string& fov_mode = fov_node.getAttributes().find("mode")->second.content;
+
+			if (fov_mode == "physical")
+			{
+				Camera::Perspective::PhysicalFOV phys = {};
+
+				const std::string& sensor_fit_str = fov_node.getAttributes().find("sensor_fit")->second.content;
+				phys.sensor_fit = (sensor_fit_str == "vertical") ? Camera::Perspective::SensorFit::VERTICAL : Camera::Perspective::SensorFit::HORIZONTAL;
+
+				phys.focal_length = getFloat(getChildElement(fov_node, "focal_length")->getText());
+				phys.sensor_width  = getFloat(getChildElement(fov_node, "sensor_width")->getText());
+				phys.sensor_height = getFloat(getChildElement(fov_node, "sensor_height")->getText());
+
+				persp.fov = phys;
+			}
+			else
+			{
+				persp.fov = getFloat(fov_node.getText());
+			}
+
+			auto f_stop_it = getChildElement(camera_node, "f_stop");
+			if (f_stop_it != camera_node.getChildren().end())
+				persp.f_stop = getFloat(f_stop_it->getText());
+
+			auto ap_blades_it = getChildElement(camera_node, "aperture_blades");
+			if (ap_blades_it != camera_node.getChildren().end())
+				persp.aperture_blades = getInt(ap_blades_it->getText());
+
+			auto ap_rot_it = getChildElement(camera_node, "aperture_rotation");
+			if (ap_rot_it != camera_node.getChildren().end())
+				persp.aperture_rotation = getFloat(ap_rot_it->getText());
+
+			auto shutter_it = getChildElement(camera_node, "shutter_speed");
+			if (shutter_it != camera_node.getChildren().end())
+				persp.shutter_speed = getFloat(shutter_it->getText());
+
+			cam.projection = persp;
+		}
+		else if (projection == "orthographic")
+		{
+			Camera::Orthographic ortho = {};
+
+			ortho.ortho_scale = getFloat(getChildElement(camera_node, "ortho_scale")->getText());
+
+			cam.projection = ortho;
+		}
+		else if (projection == "fisheye")
+		{
+			Camera::Fisheye fisheye = {};
+
+			fisheye.fisheye_fov = getFloat(getChildElement(camera_node, "fisheye_fov")->getText());
+
+			const std::string& mapping_str = getChildElement(camera_node, "fisheye_mapping")->getText();
+			if		(mapping_str == "equidistant")	fisheye.mapping = Camera::FisheyeMapping::EQUIDISTANT;
+			else if	(mapping_str == "equisolid")	fisheye.mapping = Camera::FisheyeMapping::EQUISOLID;
+			else if	(mapping_str == "orthographic")	fisheye.mapping = Camera::FisheyeMapping::ORTHOGRAPHIC;
+			else									fisheye.mapping = Camera::FisheyeMapping::STEREIGRAPHIC;
+
+			cam.projection = fisheye;
+		}
+		else if (projection == "panoramic")
+		{
+			Camera::Panoramic panoramic = {};
+
+			const std::string& pan_type_str = getChildElement(camera_node, "panoramic_type")->getText();
+			if (pan_type_str == "mercator") panoramic.panoramic_type = Camera::PanoramicType::MERCATOR;
+			else panoramic.panoramic_type = Camera::PanoramicType::EQUIRECTANGULAR;
+
+			cam.projection = panoramic;
+		}
+
+		const Node& placement = *getChildElement(camera_node, "placement");
+		const std::string& placement_type = placement.getAttributes().find("type")->second.content;
+
+		cam.position = getVec3(getChildElement(placement, "position")->getText());
+
+		if (placement_type == "rotation")
+		{
+			const Node& rotation = *getChildElement(placement, "rotation");
+			const std::string& rot_type = rotation.getAttributes().find("type")->second.content;
+
+			if (rot_type == "quaternion")
+				cam.rotation = getQuat(rotation.getText());
+			else
+			{
+				auto angles = getVec3(rotation.getText());
+				cam.rotation = quat::fromEuler(angles.x, angles.y, angles.z);
+			}
+		}
+		else
+		{
+			Camera::LookAt lookat = {};
+
+			lookat.lookat = getVec3(getChildElement(placement, "target")->getText());
+
+			auto up_it = getChildElement(placement, "up");
+			if (up_it != placement.getChildren().end())
+				lookat.up = getVec3(up_it->getText());
+			else
+				lookat.up = vec3(0.0f, 1.0f, 0.0f);
+
+			cam.rotation = lookat;
 		}
 	}
 }
@@ -483,6 +640,7 @@ Scene SceneLoader::load(const std::string& path)
 	loadTextures();
 	loadMaterials();
 	loadAssets();
+	loadCameras();
 
 	for (TdrError e : errors_.get_errors())
 	{

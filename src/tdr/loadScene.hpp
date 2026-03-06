@@ -23,6 +23,7 @@ private:
 	void debugTextures() const;
 	void loadMaterials();
 	void loadAssets();
+	void loadCameras();
 
 public:
 	Scene load(const std::string& path);

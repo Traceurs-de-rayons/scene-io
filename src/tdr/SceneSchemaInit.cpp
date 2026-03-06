@@ -898,7 +898,7 @@ void SceneSchema::build_schema()
 
 		v27.children["rotation"] = TagSchema{
 			.name = "rotation",
-			.required = false,
+			.required = true,
 			.allow_text = true,
 			.text_type = ValueType::VEC3,
 			.hover_info = "Rotation. Format depends on type attribute.",
@@ -1084,7 +1084,7 @@ void SceneSchema::build_schema()
 
 		v33.children["ortho_scale"] = TagSchema{
 			.name = "ortho_scale",
-			.required = false,
+			.required = true,
 			.allow_text = true,
 			.text_type = ValueType::FLOAT,
 			.hover_info = "Width of the visible zone (in world units)",
