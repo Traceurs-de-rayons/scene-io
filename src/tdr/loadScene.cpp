@@ -614,6 +614,48 @@ void SceneLoader::loadCameras()
 	}
 }
 
+void SceneLoader::loadLights()
+{
+	auto it = getChildElement(ast_, "lights");
+
+	if (it == ast_.getChildren().end()) return;
+
+	const Node& lights = *it;
+
+	for (const Node& light_node : lights.getChildren())
+	{
+		const auto& light_attr = light_node.getAttributes();
+
+		Light light = {};
+
+		auto label = light_attr.find("label");
+		if (label != light_attr.end()) light.label = label->second.content;
+
+		light.color = getColor(getChildElement(light_node, "color")->getText());
+
+		auto intensity_it = getChildElement(light_node, "intensity");
+		if (intensity_it != light_node.getChildren().end())
+			light.intensity = getFloat(intensity_it->getText());
+
+		const std::string& type = light_attr.find("type")->second.content;
+
+		if (type == "point")
+		{
+			Light::Point point = {};
+			point.position = getVec3(getChildElement(light_node, "position")->getText());
+			light.projection = point;
+		}
+		else if (type == "directional")
+		{
+			Light::Directional directional = {};
+			directional.direction = getVec3(getChildElement(light_node, "direction")->getText());
+			light.projection = directional;
+		}
+
+		scene_.lights_.push_back(std::move(light));
+	}
+}
+
 Scene SceneLoader::load(const std::string& path)
 {
 	path_ = path;
@@ -641,6 +683,7 @@ Scene SceneLoader::load(const std::string& path)
 	loadMaterials();
 	loadAssets();
 	loadCameras();
+	loadLights();
 
 	for (TdrError e : errors_.get_errors())
 	{

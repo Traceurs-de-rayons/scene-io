@@ -1398,6 +1398,14 @@ void SceneSchema::build_schema()
 		.completion_detail = "Type of the light"
 	};
 
+	root.children["lights"].children["light"].attributes["label"] = AttributeSchema{
+		.name = "label",
+		.required = false,
+		.type = ValueType::STRING,
+		.hover_info = "Display name of the light",
+		.completion_detail = "Display name"
+	};
+
 	root.children["lights"].children["light"].children["color"] = TagSchema{
 		.name = "color",
 		.required = true,

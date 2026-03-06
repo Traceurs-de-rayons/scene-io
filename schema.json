@@ -2186,6 +2186,18 @@
               "hover_info": "Type of the light",
               "completion_detail": "Type of the light",
               "examples": []
+            },
+            "label": {
+              "_type": "attribute",
+              "name": "label",
+              "required": false,
+              "type": "STRING",
+              "default_value": "",
+              "range": null,
+              "enum_values": [],
+              "hover_info": "Display name of the light",
+              "completion_detail": "Display name",
+              "examples": []
             }
           },
           "children": {
