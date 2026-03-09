@@ -3,6 +3,8 @@
 #include "objParser.hpp"
 
 #include <charconv>
+#include <iostream>
+#include <vector>
 
 namespace sceneIO::tdr {
 
@@ -10,7 +12,7 @@ std::vector<sceneIO::tdr::Node>::const_iterator SceneLoader::getChildElement(con
 {
 	return find_if(	n.getChildren().begin(),
 					n.getChildren().end(),
-					[&](const Node& n) { return n.getIdentifier() == name; }); 
+					[&](const Node& n) { return n.getIdentifier() == name; });
 }
 
 static float getColorChar(const std::string& s)
@@ -128,7 +130,7 @@ void SceneLoader::debugTextures() const
 void SceneLoader::loadTextures()
 {
 	auto it = getChildElement(ast_, "textures");
-	
+
 	if (it == ast_.getChildren().end()) return ;
 
 	const Node& textures = *it;
@@ -151,7 +153,7 @@ void SceneLoader::loadTextures()
 		if (label != tex_attr.end()) tex.label = label->second.content;
 
 		const std::string& type = tex_attr.find("type")->second.content;
-	
+
 		if (type == "filepath")
 		{
 			Texture::FromFile tmp = {};
@@ -182,8 +184,9 @@ void SceneLoader::loadTextures()
 void SceneLoader::loadMaterials()
 {
 	auto it = getChildElement(ast_, "materials");
-	
-	if (it == ast_.getChildren().end()) return ;
+
+	if (it == ast_.getChildren().end())
+		return ;
 
 	const Node& materials = *it;
 
@@ -314,8 +317,9 @@ void SceneLoader::loadMaterials()
 void SceneLoader::loadAssets()
 {
 	auto it = getChildElement(ast_, "assets");
-	
-	if (it == ast_.getChildren().end()) return ;
+
+	if (it == ast_.getChildren().end())
+		return ;
 
 	const Node& assets = *it;
 
@@ -337,18 +341,15 @@ void SceneLoader::loadAssets()
 		if (label != asset_attr.end()) asset.label_ = label->second.content;
 
 		const std::string& type = asset_attr.find("type")->second.content;
-	
 		if (type == "object")
 		{
 			const auto& obj = getChildElement(asset_node, "object");
 			const std::string& obj_type = obj->getAttributes().find("type")->second.content;
-
 			sceneIO::parser::ObjErrorCollector obj_errors;
 
 			if (obj_type == "external")
 			{
 				const std::string& path = obj->getAttributes().find("path")->second.content;
-				
 				sceneIO::parser::parseObj(asset, path, obj_errors);
 			}
 			else
@@ -376,13 +377,11 @@ void SceneLoader::loadAssets()
 			const auto& prim = getChildElement(asset_node, "primitive");
 			const std::string& prim_type = prim->getAttributes().find("type")->second.content;
 
-			
 			if (prim_type == "plane")
 			{
 				Asset::PrimitiveData::Plane tmp_prim = {};
 
 				tmp_prim.normal = getFloat(getChildElement(*prim, "normal")->getText());
-				
 				tmp.primitive = std::move(tmp_prim);
 			}
 			else if (prim_type == "sphere")
@@ -390,7 +389,6 @@ void SceneLoader::loadAssets()
 				Asset::PrimitiveData::Sphere tmp_prim = {};
 
 				tmp_prim.radius = getFloat(getChildElement(*prim, "radius")->getText());
-				
 				tmp.primitive = std::move(tmp_prim);
 			}
 			else if (prim_type == "cylinder")
@@ -399,7 +397,6 @@ void SceneLoader::loadAssets()
 
 				tmp_prim.radius = getFloat(getChildElement(*prim, "radius")->getText());
 				tmp_prim.height = getFloat(getChildElement(*prim, "height")->getText());
-				
 				tmp.primitive = std::move(tmp_prim);
 			}
 			else if (prim_type == "cone")
@@ -408,7 +405,6 @@ void SceneLoader::loadAssets()
 
 				tmp_prim.radius = getFloat(getChildElement(*prim, "radius")->getText());
 				tmp_prim.height = getFloat(getChildElement(*prim, "height")->getText());
-				
 				tmp.primitive = std::move(tmp_prim);
 			}
 			else if (prim_type == "hyperboloid")
@@ -420,7 +416,6 @@ void SceneLoader::loadAssets()
 				tmp_prim.b = getFloat(getChildElement(*prim, "b")->getText());
 				tmp_prim.c = getFloat(getChildElement(*prim, "c")->getText());
 				tmp_prim.shape = getFloat(getChildElement(*prim, "shape")->getText());
-				
 				tmp.primitive = std::move(tmp_prim);
 			}
 
@@ -686,7 +681,6 @@ void SceneLoader::loadRender()
 	auto output_it = getChildElement(render, "output");
 	if (output_it != render.getChildren().end())
 		render_settings.output_file = output_it->getText();
-	
 }
 
 void SceneLoader::loadEnvironment()
@@ -718,6 +712,70 @@ Scene SceneLoader::load(const std::string& path)
 {
 	path_ = path;
 	ParseResult res = SceneLanguageService::parse_file(path);
+	std::vector<ParseResult> subfileRes;
+
+	std::function<void(const Node&)> loadLinksRecursive = [&](const Node& ast) {
+		for (const Node& link : ast.getChildren())
+		{
+			if (link.getIdentifier() == "link")
+			{
+				std::string subpath = link.getAttributes().find("path")->second.content;
+				ParseResult subRes = SceneLanguageService::parse_file(subpath);
+				loadLinksRecursive(subRes.ast);
+				subfileRes.push_back(std::move(subRes));
+			}
+		}
+	};
+	loadLinksRecursive(res.ast);
+
+	std::cout << "Link number : " << subfileRes.size() << std::endl;
+
+	for (ParseResult& subRes : subfileRes) {
+		for (const Node& subChild : subRes.ast.getChildren()) {
+			if (subChild.getIdentifier() == "link")
+				continue;
+			bool foundSection = false;
+			for (Node& mainChild : res.ast.children_) {
+				if (mainChild.getIdentifier() == subChild.getIdentifier()) {
+					foundSection = true;
+					for (const Node& subItem : subChild.getChildren()) {
+						bool isDuplicate = false;
+						auto subNameIt = subItem.getAttributes().find("name");
+						if (subNameIt != subItem.getAttributes().end()) {
+							std::string subItemName = subNameIt->second.content;
+
+							for (const Node& mainItem : mainChild.getChildren()) {
+								auto mainNameIt = mainItem.getAttributes().find("name");
+								if (mainNameIt != mainItem.getAttributes().end()) {
+									if (mainNameIt->second.content == subItemName) {
+										isDuplicate = true;
+										std::cout << "  Skipping duplicate '" << subItemName << "' in section '" << mainChild.getIdentifier() << "'\n";
+										break;
+									}
+								}
+							}
+						}
+						if (!isDuplicate) {
+							mainChild.children_.push_back(subItem);
+						}
+					}
+					break;
+				}
+			}
+			if (!foundSection) {
+				res.ast.children_.push_back(subChild);
+			}
+		}
+	}
+
+	res.ast.children_.erase(
+		std::remove_if(res.ast.children_.begin(), res.ast.children_.end(),
+			[](const Node& n) { return n.getIdentifier() == "link"; }),
+		res.ast.children_.end()
+	);
+
+	std::cout << "Merged scene created with all linked files\n";
+
 	bool	has_error = false;
 
 	for (TdrError e : res.errors)
@@ -727,15 +785,34 @@ Scene SceneLoader::load(const std::string& path)
 			has_error = true;
 			cu::logger::error(e.getError());
 		}
-		else if (e.getErrorLevel() == 2) cu::logger::warn(e.getError());
-		else cu::logger::info(e.getError());
+		else if (e.getErrorLevel() == 2)
+			cu::logger::warn(e.getError());
+		else
+			cu::logger::info(e.getError());
+	}
+
+	for (ParseResult& subres : subfileRes) {
+		for (TdrError e : subres.errors)
+		{
+			if (e.getErrorLevel() == 1)
+			{
+				has_error = true;
+				cu::logger::error(e.getError());
+			}
+			else if (e.getErrorLevel() == 2)
+				cu::logger::warn(e.getError());
+			else
+				cu::logger::info(e.getError());
+		}
 	}
 
 	if (has_error) throw std::runtime_error("Cannot open the scene with an error present on the file.");
 
 	ast_ = std::move(res.ast);
 
-	// res.ast.print();
+	std::cout << "\n=== FINAL MERGED AST ===\n" << std::endl;
+	ast_.print();
+	std::cout << "\n========================\n" << std::endl;
 
 	loadTextures();
 	loadMaterials();
@@ -751,12 +828,14 @@ Scene SceneLoader::load(const std::string& path)
 			has_error = true;
 			cu::logger::error(e.getError());
 		}
-		else if (e.getErrorLevel() == 2) cu::logger::warn(e.getError());
-		else cu::logger::info(e.getError());
+		else if (e.getErrorLevel() == 2)
+			cu::logger::warn(e.getError());
+		else
+			cu::logger::info(e.getError());
 	}
 
-	if (has_error) throw std::runtime_error("Cannot open the scene with an error present on the file.");
-
+	if (has_error)
+		throw std::runtime_error("Cannot open the scene with an error present on the file.");
 	return std::move(scene_);
 }
 

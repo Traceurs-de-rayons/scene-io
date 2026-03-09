@@ -92,7 +92,7 @@ void SceneSchema::build_schema()
 		.allow_text = false,
 		.hover_info = "Link another scene file. It allow you to split scene content across multiple files.",
 		.completion_detail = "Link another scene file",
-		.allow_multiple = false
+		.allow_multiple = true
 	};
 
 	root.children["link"].attributes["path"] = AttributeSchema{

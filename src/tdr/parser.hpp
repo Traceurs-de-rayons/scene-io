@@ -35,6 +35,7 @@ private:
 	friend void analyzeNodes(Node& parent, const TagSchema& parentSchema, ErrorCollector& errors, const std::string& baseDir);
 	friend void analyseAttributes(const Node& tag, const TagSchema& tagSchema, ErrorCollector& errors, const std::string& baseDir);
 	friend TagSchema buildEffectiveSchema(const TagSchema& base, const Node& node);
+	friend class SceneLoader;
 
 public:
 	Node(const std::string& identifier = "root") : identifier_(identifier) {}
