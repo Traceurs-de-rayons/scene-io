@@ -285,6 +285,7 @@ const std::string getTokenContent(Token& tok)
 		case TokenType::STRING: return "string: " + std::string("\"") + tok.value + std::string("\"");
 		case TokenType::TEXT: return "text: " + std::string("\"") + tok.value + std::string("\"");
 	}
+	return "";
 }
 
 }
