@@ -13,8 +13,8 @@ struct SourceLocation {
 	{
 		std::string out;
 		if (!filepath.empty()) out += filepath + ":";
-		if (line != UINT64_MAX)        out += std::to_string(line) + ":";
-		if (column != UINT64_MAX)      out += std::to_string(column) + ":";
+		if (line != UINT64_MAX)		out += std::to_string(line) + ":";
+		if (column != UINT64_MAX)	  out += std::to_string(column) + ":";
 		return out;
 	}
 };
@@ -49,7 +49,7 @@ class ErrorCollector
 
 private:
 	std::vector<TdrError> errors_;
-	
+
 public:
 	ErrorCollector() = default;
 	~ErrorCollector() = default;
@@ -63,7 +63,7 @@ public:
 			if (e.location.filepath.empty()) e.location.filepath = path;
 		}
 	}
-	
+
 	bool has_errors() const { return !errors_.empty(); }
 	const std::vector<TdrError>& get_errors() const { return errors_; }
 };

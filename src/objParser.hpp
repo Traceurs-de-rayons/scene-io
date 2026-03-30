@@ -37,7 +37,7 @@ namespace sceneIO::parser {
 				e.location.filepath = path;
 		}
 
-		bool        hasErrors()  const { return !errors_.empty(); }
+		bool		hasErrors()  const { return !errors_.empty(); }
 		const std::vector<ObjError>& getErrors() const { return errors_; }
 
 	private:
@@ -45,7 +45,7 @@ namespace sceneIO::parser {
 	};
 
 	void parseObj(Asset& asset, std::istream& in, ObjErrorCollector& errors,
-	              uint64_t startLine = 1, uint64_t startColumn = 1);
+				  uint64_t startLine = 1, uint64_t startColumn = 1);
 
 	void parseObj(Asset& asset, const std::string& path, ObjErrorCollector& errors);
 	Asset parseObj(const std::string& path, ObjErrorCollector& errors);
