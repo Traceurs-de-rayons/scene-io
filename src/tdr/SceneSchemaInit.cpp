@@ -471,8 +471,8 @@ void SceneSchema::build_schema()
 		.required = false,
 		.type = ValueType::ENUM,
 		.default_value = "object",
-		.enum_values = {"object", "primitive", "instance"},
-		.hover_info = "Type of asset: object (mesh from file), primitive (built-in shape), or instance (reference to another asset).",
+		.enum_values = {"object", "primitive", "instance", "light", "sun"},
+		.hover_info = "Type of asset: object (mesh from file), primitive (built-in shape), instance (reference to another asset), light (analytical light source), or sun (infinitely distant light defined by a direction and an angular size).",
 		.completion_detail = "Asset type (required)"
 	};
 
@@ -783,6 +783,155 @@ void SceneSchema::build_schema()
 		};
 
 		root.children["assets"].children["asset"].variants.push_back(std::move(v25));
+	}
+
+	{
+		ConditionalVariant vLight;
+		vLight.discriminator_attr = "type";
+		vLight.discriminator_value = "light";
+		vLight.hover_info = "Light asset: an analytical light source.";
+		vLight.allow_text = false;
+
+		vLight.children["light"] = TagSchema{
+			.name = "light",
+			.required = true,
+			.allow_text = false,
+			.hover_info = "Light source definition. The expected children depend on the type attribute.",
+			.completion_detail = "Light source",
+			.allow_multiple = false
+		};
+
+		vLight.children["light"].attributes["type"] = AttributeSchema{
+			.name = "type",
+			.required = true,
+			.type = ValueType::ENUM,
+			.enum_values = {"point", "directional"},
+			.hover_info = "Type of the light",
+			.completion_detail = "Type of the light"
+		};
+
+		vLight.children["light"].children["color"] = TagSchema{
+			.name = "color",
+			.required = true,
+			.allow_text = true,
+			.text_type = ValueType::COLOR,
+			.hover_info = "Spectral color of the emitted light.",
+			.completion_detail = "Light color",
+			.allow_multiple = false
+		};
+
+		vLight.children["light"].children["intensity"] = TagSchema{
+			.name = "intensity",
+			.required = false,
+			.allow_text = true,
+			.text_type = ValueType::FLOAT,
+			.hover_info = "Power of the light source.\n\nFor point lights, intensity falls off with the inverse square of the distance.\nFor directional lights, intensity is uniform regardless of distance.\n\nMultiplied by color to give the final emitted radiance.",
+			.completion_detail = "Light intensity",
+			.allow_multiple = false
+		};
+
+		{
+			ConditionalVariant vLightPoint;
+			vLightPoint.discriminator_attr = "type";
+			vLightPoint.discriminator_value = "point";
+			vLightPoint.hover_info = "Omnidirectional light emitting equally in all directions from a single point.\nIntensity falls off with the square of the distance (inverse square law).";
+			vLightPoint.allow_text = false;
+
+			vLightPoint.children["position"] = TagSchema{
+				.name = "position",
+				.required = true,
+				.allow_text = true,
+				.text_type = ValueType::VEC3,
+				.hover_info = "World-space position of the light source.\n",
+				.completion_detail = "Light position",
+				.allow_multiple = false
+			};
+
+			vLight.children["light"].variants.push_back(std::move(vLightPoint));
+		}
+
+		{
+			ConditionalVariant vLightDir;
+			vLightDir.discriminator_attr = "type";
+			vLightDir.discriminator_value = "directional";
+			vLightDir.hover_info = "Infinitely distant light source emitting parallel rays in a uniform direction.\nModels large, far away sources such as the sun or moon.\nHas no position — only direction and intensity matter.";
+			vLightDir.allow_text = false;
+
+			vLightDir.children["direction"] = TagSchema{
+				.name = "direction",
+				.required = true,
+				.allow_text = true,
+				.text_type = ValueType::VEC3,
+				.range = std::make_pair(-1, 1),
+				.hover_info = "World-space direction the light is emitting toward, as a normalized vec3.\nFor example (0 -1 0) points straight down.",
+				.completion_detail = "Light direction",
+				.allow_multiple = false
+			};
+
+			vLight.children["light"].variants.push_back(std::move(vLightDir));
+		}
+
+		root.children["assets"].children["asset"].variants.push_back(std::move(vLight));
+	}
+
+	{
+		ConditionalVariant vSun;
+		vSun.discriminator_attr = "type";
+		vSun.discriminator_value = "sun";
+		vSun.hover_info = "Sun asset: an infinitely distant light with parallel rays (a directional light with an apparent size).\nHas no position — only direction, color, intensity and angle matter.";
+		vSun.allow_text = false;
+
+		vSun.children["sun"] = TagSchema{
+			.name = "sun",
+			.required = true,
+			.allow_text = false,
+			.hover_info = "Sun source definition.",
+			.completion_detail = "Sun source",
+			.allow_multiple = false
+		};
+
+		vSun.children["sun"].children["direction"] = TagSchema{
+			.name = "direction",
+			.required = false,
+			.allow_text = true,
+			.text_type = ValueType::VEC3,
+			.range = std::make_pair(-1, 1),
+			.hover_info = "World-space direction the sunlight travels toward, as a normalized vec3.\nDefaults to (0 -1 0), straight down.",
+			.completion_detail = "Sun direction",
+			.allow_multiple = false
+		};
+
+		vSun.children["sun"].children["color"] = TagSchema{
+			.name = "color",
+			.required = false,
+			.allow_text = true,
+			.text_type = ValueType::COLOR,
+			.hover_info = "Color of the sunlight. Defaults to white.",
+			.completion_detail = "Sun color",
+			.allow_multiple = false
+		};
+
+		vSun.children["sun"].children["intensity"] = TagSchema{
+			.name = "intensity",
+			.required = false,
+			.allow_text = true,
+			.text_type = ValueType::FLOAT,
+			.hover_info = "Power of the sun, uniform regardless of distance. Defaults to 1.\n\nMultiplied by color to give the final emitted radiance.",
+			.completion_detail = "Sun intensity",
+			.allow_multiple = false
+		};
+
+		vSun.children["sun"].children["angle"] = TagSchema{
+			.name = "angle",
+			.required = false,
+			.allow_text = true,
+			.text_type = ValueType::FLOAT,
+			.hover_info = "Apparent angular diameter of the sun disc in degrees. Defaults to 0.53 (the real sun).\nLarger values give softer shadows; 0 gives perfectly sharp shadows.",
+			.completion_detail = "Sun angular diameter",
+			.allow_multiple = false
+		};
+
+		root.children["assets"].children["asset"].variants.push_back(std::move(vSun));
 	}
 
 	root.children["cameras"] = TagSchema{
@@ -1369,102 +1518,6 @@ void SceneSchema::build_schema()
 		};
 
 		root.children["textures"].children["texture"].variants.push_back(std::move(v38));
-	}
-
-	root.children["lights"] = TagSchema{
-		.name = "lights",
-		.required = false,
-		.allow_text = false,
-		.hover_info = "Container for all analytical lights in the scene.\nEmissive surfaces are defined at the material level and are not listed here.",
-		.completion_detail = "Lights",
-		.allow_multiple = false
-	};
-
-	root.children["lights"].children["light"] = TagSchema{
-		.name = "light",
-		.required = false,
-		.allow_text = false,
-		.hover_info = "Defines an analytical light source. The expected children depend on the type attribute.",
-		.completion_detail = "Scene light",
-		.allow_multiple = true
-	};
-
-	root.children["lights"].children["light"].attributes["type"] = AttributeSchema{
-		.name = "type",
-		.required = true,
-		.type = ValueType::ENUM,
-		.enum_values = {"point", "directional"},
-		.hover_info = "Type of the light",
-		.completion_detail = "Type of the light"
-	};
-
-	root.children["lights"].children["light"].attributes["label"] = AttributeSchema{
-		.name = "label",
-		.required = false,
-		.type = ValueType::STRING,
-		.hover_info = "Display name of the light",
-		.completion_detail = "Display name"
-	};
-
-	root.children["lights"].children["light"].children["color"] = TagSchema{
-		.name = "color",
-		.required = true,
-		.allow_text = true,
-		.text_type = ValueType::COLOR,
-		.hover_info = "Spectral color of the emitted light.",
-		.completion_detail = "Light color",
-		.allow_multiple = false
-	};
-
-	root.children["lights"].children["light"].children["intensity"] = TagSchema{
-		.name = "intensity",
-		.required = false,
-		.allow_text = true,
-		.text_type = ValueType::FLOAT,
-		.hover_info = "Power of the light source.\n\nFor point lights, intensity falls off with the inverse square of the distance.\nFor directional lights, intensity is uniform regardless of distance.\n\nMultiplied by color to give the final emitted radiance.",
-		.completion_detail = "Light intensity",
-		.allow_multiple = false
-	};
-
-	{
-		ConditionalVariant v39;
-		v39.discriminator_attr = "type";
-		v39.discriminator_value = "point";
-		v39.hover_info = "Omnidirectional light emitting equally in all directions from a single point.\nIntensity falls off with the square of the distance (inverse square law).";
-		v39.allow_text = false;
-
-		v39.children["position"] = TagSchema{
-			.name = "position",
-			.required = true,
-			.allow_text = true,
-			.text_type = ValueType::VEC3,
-			.hover_info = "World-space position of the light source.\n",
-			.completion_detail = "Light position",
-			.allow_multiple = false
-		};
-
-		root.children["lights"].children["light"].variants.push_back(std::move(v39));
-	}
-
-	{
-		ConditionalVariant v40;
-		v40.discriminator_attr = "type";
-		v40.discriminator_value = "directional";
-		v40.hover_info = "Infinitely distant light source emitting parallel rays in a uniform direction.\nModels large, far away sources such as the sun or moon.\nHas no position — only direction and intensity matter.";
-		v40.allow_text = false;
-
-		v40.children["direction"] = TagSchema{
-			.name = "direction",
-			.required = true,
-			.allow_text = true,
-			.text_type = ValueType::VEC3,
-			.range = std::make_pair(-1, 1),
-			.hover_info = "World-space direction the light is emitting toward, as a normalized vec3.\nFor example (0 -1 0) points straight down.",
-			.completion_detail = "Light direction",
-			.allow_multiple = false
-		};
-
-		root.children["lights"].children["light"].variants.push_back(std::move(v40));
 	}
 
 	root.children["environment"] = TagSchema{

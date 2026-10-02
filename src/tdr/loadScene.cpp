@@ -77,7 +77,7 @@ vec3 getVec3(const std::string& s)
 {
 	auto parts = cu::string::split(s, ' ');
 
-	return {getFloat(parts[0]), getFloat(parts[1]), getFloat(parts[1])};
+	return {getFloat(parts[0]), getFloat(parts[1]), getFloat(parts[2])};
 }
 
 quat getQuat(const std::string& s)
@@ -429,6 +429,55 @@ void SceneLoader::loadAssets()
 
 			asset.content_ = std::move(tmp);
 		}
+		else if (type == "light")
+		{
+			Asset::LightData tmp = {};
+
+			auto label_it = asset_attr.find("label");
+			if (label_it != asset_attr.end()) tmp.label = label_it->second.content;
+
+			const auto& light = getChildElement(asset_node, "light");
+			const std::string& light_type = light->getAttributes().find("type")->second.content;
+
+			tmp.color = getColor(getChildElement(*light, "color")->getText());
+
+			auto intensity_it = getChildElement(*light, "intensity");
+			if (intensity_it != light->getChildren().end())
+				tmp.intensity = getFloat(intensity_it->getText());
+
+			if (light_type == "point")
+			{
+				Asset::LightData::Point point = {};
+				point.position = getVec3(getChildElement(*light, "position")->getText());
+				tmp.projection = point;
+			}
+			else if (light_type == "directional")
+			{
+				Asset::LightData::Directional directional = {};
+				directional.direction = getVec3(getChildElement(*light, "direction")->getText());
+				tmp.projection = directional;
+			}
+
+			asset.content_ = std::move(tmp);
+		}
+		else if (type == "sun")
+		{
+			Asset::SunData tmp = {};
+
+			const auto& sun = getChildElement(asset_node, "sun");
+			const auto  end = sun->getChildren().end();
+
+			if (auto it = getChildElement(*sun, "direction"); it != end)
+				tmp.direction = getVec3(it->getText());
+			if (auto it = getChildElement(*sun, "color"); it != end)
+				tmp.color = getColor(it->getText());
+			if (auto it = getChildElement(*sun, "intensity"); it != end)
+				tmp.intensity = getFloat(it->getText());
+			if (auto it = getChildElement(*sun, "angle"); it != end)
+				tmp.angle = getFloat(it->getText());
+
+			asset.content_ = std::move(tmp);
+		}
 
 		const auto& mat = getChildElement(asset_node, "material");
 		if (mat != asset_node.getChildren().end())
@@ -609,48 +658,6 @@ void SceneLoader::loadCameras()
 	}
 }
 
-void SceneLoader::loadLights()
-{
-	auto it = getChildElement(ast_, "lights");
-
-	if (it == ast_.getChildren().end()) return;
-
-	const Node& lights = *it;
-
-	for (const Node& light_node : lights.getChildren())
-	{
-		const auto& light_attr = light_node.getAttributes();
-
-		Light light = {};
-
-		auto label = light_attr.find("label");
-		if (label != light_attr.end()) light.label = label->second.content;
-
-		light.color = getColor(getChildElement(light_node, "color")->getText());
-
-		auto intensity_it = getChildElement(light_node, "intensity");
-		if (intensity_it != light_node.getChildren().end())
-			light.intensity = getFloat(intensity_it->getText());
-
-		const std::string& type = light_attr.find("type")->second.content;
-
-		if (type == "point")
-		{
-			Light::Point point = {};
-			point.position = getVec3(getChildElement(light_node, "position")->getText());
-			light.projection = point;
-		}
-		else if (type == "directional")
-		{
-			Light::Directional directional = {};
-			directional.direction = getVec3(getChildElement(light_node, "direction")->getText());
-			light.projection = directional;
-		}
-
-		scene_.lights_.push_back(std::move(light));
-	}
-}
-
 void SceneLoader::loadRender()
 {
 	auto it = getChildElement(ast_, "render");
@@ -818,7 +825,6 @@ Scene SceneLoader::load(const std::string& path)
 	loadMaterials();
 	loadAssets();
 	loadCameras();
-	loadLights();
 
 	for (TdrError e : errors_.get_errors())
 	{

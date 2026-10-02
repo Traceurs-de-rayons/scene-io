@@ -24,7 +24,6 @@ private:
 	void loadMaterials();
 	void loadAssets();
 	void loadCameras();
-	void loadLights();
 	void loadRender();
 	void loadEnvironment();
 
