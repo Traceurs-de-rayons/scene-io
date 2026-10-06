@@ -3,7 +3,10 @@
 #include <iostream>
 #include <unordered_map>
 #include <functional>
+#include <algorithm>
+#include <cmath>
 #include <cstring>
+#include <string>
 #include <charconv>
 
 namespace sceneIO::parser
@@ -165,27 +168,36 @@ namespace sceneIO::parser
 		return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 	}
 
-	static inline bool pointInTriangle2D(vec2 p, vec2 a, vec2 b, vec2 c)
+	static inline bool samePoint(vec2 a, vec2 b)
 	{
-		float areaABC = std::abs(cross2D(a, b, c));
-
-		float areaPBC = std::abs(cross2D(p, b, c));
-		float areaPCA = std::abs(cross2D(p, c, a));
-		float areaPAB = std::abs(cross2D(p, a, b));
-
-		float epsilon = 1e-6f;
-		return std::abs(areaABC - (areaPBC + areaPCA + areaPAB)) < epsilon
-			   && areaPBC > epsilon && areaPCA > epsilon && areaPAB > epsilon;
+		return a.x == b.x && a.y == b.y;
 	}
 
-	static inline bool isEar(const std::vector<Vertex>& meshVertices, uint32_t iPrev, uint32_t iCurr, uint32_t iNext, const vec3& faceNormal, std::vector<uint32_t>& polygon)
+	/**
+	 * @return the (non normalized) normal of the polygon, computed from all its vertices
+	 *         so it stays valid when the first ones are collinear.
+	 */
+	static inline vec3 polygonNormal(const std::vector<Vertex>& meshVertices, const std::vector<uint32_t>& polygon)
+	{
+		const vec3& origin = meshVertices[polygon[0]].pos;
+		vec3 n(0);
+
+		for (size_t i = 1; i + 1 < polygon.size(); i++)
+			n = n + vec3::cross(meshVertices[polygon[i]].pos - origin, meshVertices[polygon[i + 1]].pos - origin);
+		return n;
+	}
+
+	/**
+	 * @param winding  sign of the polygon area once projected (1 or -1)
+	 */
+	static inline bool isEar(const std::vector<Vertex>& meshVertices, uint32_t iPrev, uint32_t iCurr, uint32_t iNext, const vec3& faceNormal, std::vector<uint32_t>& polygon, float winding, float epsilon)
 	{
 		vec2 prev = project(meshVertices[iPrev].pos, faceNormal);
 		vec2 curr = project(meshVertices[iCurr].pos, faceNormal);
 		vec2 next = project(meshVertices[iNext].pos, faceNormal);
 
-		float area = cross2D(prev, curr, next);
-		if (std::abs(area) < 1e-6f)
+		// reflex or flat corner
+		if (cross2D(prev, curr, next) * winding <= epsilon)
 			return false;
 
 		for (uint32_t vertex : polygon)
@@ -194,7 +206,12 @@ namespace sceneIO::parser
 				continue;
 
 			vec2 p = project(meshVertices[vertex].pos, faceNormal);
-			if (pointInTriangle2D(p, prev, curr, next))
+			if (samePoint(p, prev) || samePoint(p, curr) || samePoint(p, next))
+				continue;
+
+			if (cross2D(prev, curr, p) * winding >= -epsilon
+				&& cross2D(curr, next, p) * winding >= -epsilon
+				&& cross2D(next, prev, p) * winding >= -epsilon)
 				return false;
 		}
 
@@ -202,17 +219,39 @@ namespace sceneIO::parser
 	}
 
 	/**
-	 * @return true on success, false if the polygon is degenerated (error reported).
+	 * @return false if the polygon has no area (nothing is added to @p result).
 	 */
 	static inline bool earClipping(const std::vector<Vertex>& meshVertices,
 	                                std::vector<uint32_t>& polygon,
 	                                std::vector<uint32_t>& result,
-	                                vec3& faceNormal,
-	                                ObjErrorCollector& errors, ObjSourceLocation loc)
+	                                const vec3& faceNormal)
 	{
+		vec2 first = project(meshVertices[polygon[0]].pos, faceNormal);
+		vec2 min = first;
+		vec2 max = first;
+		float signedArea = 0;
+
+		for (size_t i = 1; i < polygon.size(); i++)
+		{
+			vec2 p = project(meshVertices[polygon[i]].pos, faceNormal);
+
+			min = { std::min(min.x, p.x), std::min(min.y, p.y) };
+			max = { std::max(max.x, p.x), std::max(max.y, p.y) };
+			if (i + 1 < polygon.size())
+				signedArea += cross2D(first, p, project(meshVertices[polygon[i + 1]].pos, faceNormal));
+		}
+
+		float extent = std::max(max.x - min.x, max.y - min.y);
+		float epsilon = 1e-6f * extent * extent;
+
+		if (std::abs(signedArea) <= epsilon)
+			return false;
+
+		float winding = signedArea > 0 ? 1.0f : -1.0f;
+
 		while (polygon.size() > 3)
 		{
-			bool earFound = false;
+			bool clipped = false;
 
 			for (auto it = polygon.begin(); it != polygon.end(); ++it)
 			{
@@ -220,36 +259,57 @@ namespace sceneIO::parser
 				auto next = std::next(it);
 				if (next == polygon.end()) next = polygon.begin();
 
-				if (isEar(meshVertices, *prev, *it, *next, faceNormal, polygon))
+				if (isEar(meshVertices, *prev, *it, *next, faceNormal, polygon, winding, epsilon))
 				{
 					result.push_back(*prev);
 					result.push_back(*it);
 					result.push_back(*next);
 
 					polygon.erase(it);
-					earFound = true;
+					clipped = true;
 					break;
 				}
 			}
 
-			if (!earFound)
+			// no ear left: drop a vertex lying on the segment between its neighbours
+			for (auto it = polygon.begin(); !clipped && it != polygon.end(); ++it)
 			{
-				errors.report(loc, "The face is a degenerated polygon. Is this face counter clock wise ?");
-				return false;
+				auto prev = (it == polygon.begin()) ? std::prev(polygon.end()) : std::prev(it);
+				auto next = std::next(it);
+				if (next == polygon.end()) next = polygon.begin();
+
+				if (std::abs(cross2D(project(meshVertices[*prev].pos, faceNormal),
+				                     project(meshVertices[*it].pos, faceNormal),
+				                     project(meshVertices[*next].pos, faceNormal))) <= epsilon)
+				{
+					polygon.erase(it);
+					clipped = true;
+				}
 			}
+
+			// self intersecting polygon: fall back to a fan for what is left
+			if (!clipped)
+				break;
 		}
 
-		auto it = polygon.begin();
-		result.push_back(*it++);
-		result.push_back(*it++);
-		result.push_back(*it);
+		first = project(meshVertices[polygon[0]].pos, faceNormal);
+		for (size_t i = 1; i + 1 < polygon.size(); i++)
+		{
+			if (std::abs(cross2D(first, project(meshVertices[polygon[i]].pos, faceNormal),
+			                     project(meshVertices[polygon[i + 1]].pos, faceNormal))) <= epsilon)
+				continue;
+
+			result.push_back(polygon[0]);
+			result.push_back(polygon[i]);
+			result.push_back(polygon[i + 1]);
+		}
 		return true;
 	}
 
 	void parseObj(Asset& asset, std::istream& in, ObjErrorCollector& errors,
 	              uint64_t startLine, uint64_t startColumn)
 	{
-		char line[512];
+		std::string line;
 		Asset::ObjectData objAsset;
 
 		uint64_t line_count = startLine - 1;
@@ -264,14 +324,14 @@ namespace sceneIO::parser
 
 		std::unordered_map<VertexKey, uint32_t> vertexMap;
 
-		while (in.getline(line, sizeof(line)))
+		while (std::getline(in, line))
 		{
 			line_count++;
 			uint64_t baseCol = (line_count == startLine) ? startColumn : 1;
 
-			const char* ptr = line;
+			const char* ptr = line.c_str();
 			while (*ptr != '\0' && std::isspace(static_cast<unsigned char>(*ptr))) ptr++;
-			uint64_t col = baseCol + static_cast<uint64_t>(ptr - line);
+			uint64_t col = baseCol + static_cast<uint64_t>(ptr - line.c_str());
 
 			if (*ptr == '\0' || *ptr == '#') continue;
 
@@ -397,12 +457,7 @@ namespace sceneIO::parser
 
 				if (indexError) continue;
 
-				vec3 faceNormal = vec3::cross(
-					objAsset.meshes[currentMeshID]->vertices_[faceVertexIndexes[1]].pos -
-					objAsset.meshes[currentMeshID]->vertices_[faceVertexIndexes[0]].pos,
-					objAsset.meshes[currentMeshID]->vertices_[faceVertexIndexes[2]].pos -
-					objAsset.meshes[currentMeshID]->vertices_[faceVertexIndexes[0]].pos
-				).normalized();
+				vec3 faceNormal = polygonNormal(objAsset.meshes[currentMeshID]->vertices_, faceVertexIndexes).normalized();
 
 				if (faceMissingNormal)
 				{
@@ -418,7 +473,7 @@ namespace sceneIO::parser
 
 				earClipping(objAsset.meshes[currentMeshID]->vertices_, faceVertexIndexes,
 				            objAsset.meshes[currentMeshID]->subMeshes_[currentSubMeshID]->indices_,
-				            faceNormal, errors, loc);
+				            faceNormal);
 			}
 		}
 
