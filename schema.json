@@ -2181,7 +2181,8 @@
               "range": null,
               "enum_values": [
                 "point",
-                "directional"
+                "directional",
+                "spot"
               ],
               "hover_info": "Type of the light",
               "completion_detail": "Type of the light",
@@ -2224,7 +2225,7 @@
               "allow_text": true,
               "text_type": "FLOAT",
               "range": null,
-              "hover_info": "Power of the light source.\n\nFor point lights, intensity falls off with the inverse square of the distance.\nFor directional lights, intensity is uniform regardless of distance.\n\nMultiplied by color to give the final emitted radiance.",
+              "hover_info": "Power of the light source.\n\nFor point and spot lights, intensity falls off with the inverse square of the distance.\nFor directional lights, intensity is uniform regardless of distance.\n\nMultiplied by color to give the final emitted radiance.",
               "completion_detail": "Light intensity",
               "examples": [],
               "allow_multiple": false,
@@ -2284,6 +2285,93 @@
                   ],
                   "hover_info": "World-space direction the light is emitting toward, as a normalized vec3.\nFor example (0 -1 0) points straight down.",
                   "completion_detail": "Light direction",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                }
+              },
+              "include": [],
+              "allow_text": false,
+              "text_type": null,
+              "range": null,
+              "enum_values": []
+            },
+            {
+              "_type": "variant",
+              "discriminator_attr": "type",
+              "discriminator_value": "spot",
+              "hover_info": "Light emitting a cone from a single point, like a flashlight or a stage projector.\nIntensity falls off with the square of the distance (inverse square law).",
+              "attributes": {},
+              "children": {
+                "position": {
+                  "_type": "tag",
+                  "name": "position",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "VEC3",
+                  "range": null,
+                  "hover_info": "World-space position of the light source.\n",
+                  "completion_detail": "Light position",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                },
+                "direction": {
+                  "_type": "tag",
+                  "name": "direction",
+                  "required": true,
+                  "allow_text": true,
+                  "text_type": "VEC3",
+                  "range": [
+                    -1,
+                    1
+                  ],
+                  "hover_info": "World-space direction of the cone axis, as a normalized vec3.\nFor example (0 -1 0) points straight down.",
+                  "completion_detail": "Light direction",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                },
+                "angle": {
+                  "_type": "tag",
+                  "name": "angle",
+                  "required": false,
+                  "allow_text": true,
+                  "text_type": "FLOAT",
+                  "range": [
+                    1,
+                    179
+                  ],
+                  "hover_info": "Full angle of the cone in degrees. Defaults to 45.",
+                  "completion_detail": "Spot cone angle",
+                  "examples": [],
+                  "allow_multiple": false,
+                  "attributes": {},
+                  "children": {},
+                  "variants": [],
+                  "include": []
+                },
+                "blend": {
+                  "_type": "tag",
+                  "name": "blend",
+                  "required": false,
+                  "allow_text": true,
+                  "text_type": "FLOAT",
+                  "range": [
+                    0,
+                    1
+                  ],
+                  "hover_info": "Fraction of the cone faded out at its edge. Defaults to 0.15.\n0 gives a hard edge, 1 fades from the axis to the edge.",
+                  "completion_detail": "Spot edge softness",
                   "examples": [],
                   "allow_multiple": false,
                   "attributes": {},

@@ -457,6 +457,17 @@ void SceneLoader::loadAssets()
 				directional.direction = getVec3(getChildElement(*light, "direction")->getText());
 				tmp.projection = directional;
 			}
+			else if (light_type == "spot")
+			{
+				Asset::LightData::Spot spot = {};
+				spot.position = getVec3(getChildElement(*light, "position")->getText());
+				spot.direction = getVec3(getChildElement(*light, "direction")->getText());
+				if (auto it = getChildElement(*light, "angle"); it != light->getChildren().end())
+					spot.angle = getFloat(it->getText());
+				if (auto it = getChildElement(*light, "blend"); it != light->getChildren().end())
+					spot.blend = getFloat(it->getText());
+				tmp.projection = spot;
+			}
 
 			asset.content_ = std::move(tmp);
 		}

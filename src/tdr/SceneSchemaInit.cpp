@@ -805,7 +805,7 @@ void SceneSchema::build_schema()
 			.name = "type",
 			.required = true,
 			.type = ValueType::ENUM,
-			.enum_values = {"point", "directional"},
+			.enum_values = {"point", "directional", "spot"},
 			.hover_info = "Type of the light",
 			.completion_detail = "Type of the light"
 		};
@@ -825,7 +825,7 @@ void SceneSchema::build_schema()
 			.required = false,
 			.allow_text = true,
 			.text_type = ValueType::FLOAT,
-			.hover_info = "Power of the light source.\n\nFor point lights, intensity falls off with the inverse square of the distance.\nFor directional lights, intensity is uniform regardless of distance.\n\nMultiplied by color to give the final emitted radiance.",
+			.hover_info = "Power of the light source.\n\nFor point and spot lights, intensity falls off with the inverse square of the distance.\nFor directional lights, intensity is uniform regardless of distance.\n\nMultiplied by color to give the final emitted radiance.",
 			.completion_detail = "Light intensity",
 			.allow_multiple = false
 		};
@@ -869,6 +869,59 @@ void SceneSchema::build_schema()
 			};
 
 			vLight.children["light"].variants.push_back(std::move(vLightDir));
+		}
+
+		{
+			ConditionalVariant vLightSpot;
+			vLightSpot.discriminator_attr = "type";
+			vLightSpot.discriminator_value = "spot";
+			vLightSpot.hover_info = "Light emitting a cone from a single point, like a flashlight or a stage projector.\nIntensity falls off with the square of the distance (inverse square law).";
+			vLightSpot.allow_text = false;
+
+			vLightSpot.children["position"] = TagSchema{
+				.name = "position",
+				.required = true,
+				.allow_text = true,
+				.text_type = ValueType::VEC3,
+				.hover_info = "World-space position of the light source.\n",
+				.completion_detail = "Light position",
+				.allow_multiple = false
+			};
+
+			vLightSpot.children["direction"] = TagSchema{
+				.name = "direction",
+				.required = true,
+				.allow_text = true,
+				.text_type = ValueType::VEC3,
+				.range = std::make_pair(-1, 1),
+				.hover_info = "World-space direction of the cone axis, as a normalized vec3.\nFor example (0 -1 0) points straight down.",
+				.completion_detail = "Light direction",
+				.allow_multiple = false
+			};
+
+			vLightSpot.children["angle"] = TagSchema{
+				.name = "angle",
+				.required = false,
+				.allow_text = true,
+				.text_type = ValueType::FLOAT,
+				.range = std::make_pair(1, 179),
+				.hover_info = "Full angle of the cone in degrees. Defaults to 45.",
+				.completion_detail = "Spot cone angle",
+				.allow_multiple = false
+			};
+
+			vLightSpot.children["blend"] = TagSchema{
+				.name = "blend",
+				.required = false,
+				.allow_text = true,
+				.text_type = ValueType::FLOAT,
+				.range = std::make_pair(0, 1),
+				.hover_info = "Fraction of the cone faded out at its edge. Defaults to 0.15.\n0 gives a hard edge, 1 fades from the axis to the edge.",
+				.completion_detail = "Spot edge softness",
+				.allow_multiple = false
+			};
+
+			vLight.children["light"].variants.push_back(std::move(vLightSpot));
 		}
 
 		root.children["assets"].children["asset"].variants.push_back(std::move(vLight));
