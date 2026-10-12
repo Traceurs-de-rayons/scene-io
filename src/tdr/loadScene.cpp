@@ -3,8 +3,22 @@
 #include "objParser.hpp"
 
 #include <charconv>
+#include <filesystem>
 #include <iostream>
 #include <vector>
+
+namespace {
+
+	// Paths written in a scene file are relative to that file, so a scene can be moved with its resources.
+	std::string resolvePath(const std::string& scenePath, const std::string& path)
+	{
+		const std::filesystem::path p(path);
+		if (path.empty() || p.is_absolute())
+			return path;
+		return (std::filesystem::path(scenePath).parent_path() / p).lexically_normal().string();
+	}
+
+}
 
 namespace sceneIO::tdr {
 
@@ -158,7 +172,7 @@ void SceneLoader::loadTextures()
 		{
 			Texture::FromFile tmp = {};
 
-			tmp.path = getChildElement(texture, "path")->getText();
+			tmp.path = resolvePath(path_, getChildElement(texture, "path")->getText());
 			tex.data = std::move(tmp);
 		}
 		else if (type == "checker_local")
@@ -349,7 +363,7 @@ void SceneLoader::loadAssets()
 
 			if (obj_type == "external")
 			{
-				const std::string& path = obj->getAttributes().find("path")->second.content;
+				const std::string path = resolvePath(path_, obj->getAttributes().find("path")->second.content);
 				sceneIO::parser::parseObj(asset, path, obj_errors);
 			}
 			else
@@ -715,7 +729,7 @@ void SceneLoader::loadEnvironment()
 	{
 		Environment::Skybox skybox;
 
-		skybox.path = getChildElement(env, "skybox")->getText();
+		skybox.path = resolvePath(path_, getChildElement(env, "skybox")->getText());
 		skybox.rotation = getFloat(getChildElement(env, "rotation")->getText());
 
 		scene_.environment_.env = std::move(skybox);
@@ -732,19 +746,19 @@ Scene SceneLoader::load(const std::string& path)
 	ParseResult res = SceneLanguageService::parse_file(path);
 	std::vector<ParseResult> subfileRes;
 
-	std::function<void(const Node&)> loadLinksRecursive = [&](const Node& ast) {
+	std::function<void(const Node&, const std::string&)> loadLinksRecursive = [&](const Node& ast, const std::string& file) {
 		for (const Node& link : ast.getChildren())
 		{
 			if (link.getIdentifier() == "link")
 			{
-				std::string subpath = link.getAttributes().find("path")->second.content;
+				std::string subpath = resolvePath(file, link.getAttributes().find("path")->second.content);
 				ParseResult subRes = SceneLanguageService::parse_file(subpath);
-				loadLinksRecursive(subRes.ast);
+				loadLinksRecursive(subRes.ast, subpath);
 				subfileRes.push_back(std::move(subRes));
 			}
 		}
 	};
-	loadLinksRecursive(res.ast);
+	loadLinksRecursive(res.ast, path);
 
 	std::cout << "Link number : " << subfileRes.size() << std::endl;
 
