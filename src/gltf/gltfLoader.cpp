@@ -231,19 +231,35 @@ bool sceneIO::loadGltf(const std::string& path, Model& model, std::string& error
 		return rigidBone[node] = model.bones.size() - 1;
 	};
 
-	// --- Materials: base color only, as a texture or a flat color. Images used for anything
-	// else (normal maps, roughness) are left out: they would be loaded for nothing.
-	std::vector<bool> baseColor(raw->images_count, false);
+	// --- Materials: the base color (a texture or a flat color), the metallic and roughness (their
+	// factors, and their image when it also holds the occlusion: red = occlusion, green =
+	// roughness, blue = metallic, the one image the renderer reads them from), the normal map.
+	// Other images are left out: they would be loaded for nothing.
+	const auto packedOrm = [](const cgltf_material& material) -> const cgltf_image* {
+		if (!material.has_pbr_metallic_roughness)
+			return nullptr;
+		const cgltf_texture* metalRough = material.pbr_metallic_roughness.metallic_roughness_texture.texture;
+		const cgltf_texture* occlusion	= material.occlusion_texture.texture;
+		if (!metalRough || !metalRough->image || !occlusion || occlusion->image != metalRough->image)
+			return nullptr; // without the occlusion in its red, the renderer would read it black
+		return metalRough->image;
+	};
+	std::vector<bool> needed(raw->images_count, false);
 	for (cgltf_size i = 0; i < raw->materials_count; ++i) {
-		const cgltf_texture* texture = raw->materials[i].has_pbr_metallic_roughness ? raw->materials[i].pbr_metallic_roughness.base_color_texture.texture : nullptr;
+		const cgltf_material& material = raw->materials[i];
+		const cgltf_texture*  texture  = material.has_pbr_metallic_roughness ? material.pbr_metallic_roughness.base_color_texture.texture : nullptr;
 		if (texture && texture->image)
-			baseColor[static_cast<size_t>(texture->image - raw->images)] = true;
+			needed[static_cast<size_t>(texture->image - raw->images)] = true;
+		if (const cgltf_image* orm = packedOrm(material))
+			needed[static_cast<size_t>(orm - raw->images)] = true;
+		if (material.normal_texture.texture && material.normal_texture.texture->image)
+			needed[static_cast<size_t>(material.normal_texture.texture->image - raw->images)] = true;
 	}
 	for (cgltf_size i = 0; i < raw->images_count; ++i) {
 		const cgltf_image& image = raw->images[i];
 		ModelTexture	   texture;
 		texture.name = "image_" + std::to_string(i);
-		if (!baseColor[i]) {
+		if (!needed[i]) {
 			model.textures.push_back(std::move(texture)); // kept empty so that indices still match
 			continue;
 		}
@@ -279,6 +295,31 @@ bool sceneIO::loadGltf(const std::string& path, Model& model, std::string& error
 			material.albedo = MaterialParam<vec3>{vec3(color[0], color[1], color[2])};
 		} else {
 			material.albedo = MaterialParam<vec3>{vec3(0.8f)};
+		}
+		if (source.has_pbr_metallic_roughness) {
+			const cgltf_pbr_metallic_roughness& pbr = source.pbr_metallic_roughness;
+			const cgltf_image*					orm = packedOrm(source);
+			if (orm && usable(pbr.metallic_roughness_texture.texture)) {
+				const std::string name		= model.textures[static_cast<size_t>(orm - raw->images)].name;
+				material.ambient_occlusion	= MaterialParam<float>{name};
+				material.roughness			= MaterialParam<float>{name};
+				material.metallic			= MaterialParam<float>{name};
+				material.roughness_factor	= pbr.roughness_factor;
+				material.metallic_factor	= pbr.metallic_factor;
+				material.occlusion_factor	= source.occlusion_texture.scale;
+			} else {
+				material.roughness = MaterialParam<float>{pbr.roughness_factor};
+				material.metallic  = MaterialParam<float>{pbr.metallic_factor};
+			}
+		}
+		if (usable(source.normal_texture.texture)) {
+			material.normal_map		  = model.textures[static_cast<size_t>(source.normal_texture.texture->image - raw->images)].name;
+			material.normal_intensity = source.normal_texture.scale;
+		}
+		// Masked by its alpha (torn cloth, fur, grates): cut out where the alpha is low.
+		if (source.alpha_mode == cgltf_alpha_mode_mask) {
+			material.alpha_mode	  = "cutout";
+			material.alpha_cutoff = source.alpha_cutoff;
 		}
 
 		const float emission = std::max({source.emissive_factor[0], source.emissive_factor[1], source.emissive_factor[2]});
